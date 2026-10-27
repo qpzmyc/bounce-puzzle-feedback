@@ -98,7 +98,7 @@
     setStep(vb, true);
     if (gs.every(groupValue)) {
       var here = current;
-      setTimeout(function () { if (current === here) next(); }, reduce.matches ? 150 : 550);
+      setTimeout(function () { if (current === here) next(); }, reduce.matches ? 250 : 750);
     }
   });
 

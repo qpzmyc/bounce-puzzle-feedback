@@ -154,7 +154,8 @@ h1, h2, p { margin: 0; }
 /* second rating is shown from the start but dimmed and locked until the first is answered
    (app.js adds .step2), so the screen never grows and the second tap is expected */
 .later { transition: opacity 250ms var(--ease); }
-.vbody:not(.step2) .later { opacity: 0.35; pointer-events: none; }
+.vbody:not(.step2) .later { opacity: 0.55; pointer-events: none; }
+.vbody:not(.step2) .later legend::after { content: " after the first"; font-weight: 500; color: var(--soft); }
 @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 .step {
   display: inline-block; margin-right: 8px; padding: 3px 8px; border-radius: 999px;
@@ -249,7 +250,9 @@ h1, h2, p { margin: 0; }
   .screen:has(.dock) { padding-bottom: 104px; }
   /* video screens: top-anchored so revealing the second rating never moves the clip */
   .vscreen { justify-content: flex-start; padding-top: 64px; padding-bottom: 84px; }
-  .clip { height: clamp(200px, 31dvh, 300px); }
+  .clip { height: clamp(190px, 28dvh, 280px); }
+  .vbody .rate { margin-top: 12px; }
+  .vbody { margin-top: 12px; }
   /* video screens have no Next, so the skip link sits right under the ratings */
   .actions.dock.vdock { position: static; background: none; padding: 14px 0 0; }
   .vdock .btn.ghost { align-self: center; }
