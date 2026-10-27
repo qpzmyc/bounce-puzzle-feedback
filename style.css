@@ -155,7 +155,7 @@ h1, h2, p { margin: 0; }
    (app.js adds .step2), so the screen never grows and the second tap is expected */
 .later { transition: opacity 250ms var(--ease); }
 .vbody:not(.step2) .later { opacity: 0.55; pointer-events: none; }
-.vbody:not(.step2) .later legend::after { content: " after the first"; font-weight: 500; color: var(--soft); }
+.vbody:not(.step2) .later legend::after { content: "Opens after the first one"; display: block; margin-top: 2px; font-size: 0.875rem; font-weight: 500; color: var(--soft); }
 @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 .step {
   display: inline-block; margin-right: 8px; padding: 3px 8px; border-radius: 999px;
