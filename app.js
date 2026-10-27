@@ -49,6 +49,9 @@
     backBtn.hidden = i === 0 || i === last;
     activeGroup = null;
     var gs = groupsIn(s);
+    var vb = s.querySelector('.vbody');
+    // A video screen shows its second rating once the first has an answer.
+    if (vb) vb.classList.toggle('step2', !!(gs[0] && groupValue(gs[0])));
     activeGroup = gs.filter(function (g) { return !groupValue(g); })[0] || gs[0] || null;
     msg.hidden = true;
     window.scrollTo(0, 0);
@@ -64,7 +67,10 @@
     if (t) { next(); return; }
     var sk = e.target.closest('[data-skip]');
     if (sk) {
-      Array.prototype.forEach.call(sk.closest('.screen').querySelectorAll('input[type=radio]'), function (r) { r.checked = false; });
+      var ss = sk.closest('.screen');
+      Array.prototype.forEach.call(ss.querySelectorAll('input[type=radio]'), function (r) { r.checked = false; });
+      var svb = ss.querySelector('.vbody');
+      if (svb) svb.classList.remove('step2');
       next();
     }
   });
@@ -77,6 +83,14 @@
     var gs = groupsIn(screens[current]);
     var other = gs.filter(function (x) { return x !== g && !groupValue(x); })[0];
     if (other && gs.indexOf(g) < gs.indexOf(other)) activeGroup = other;
+    var vb = g.closest('.vbody');
+    if (!vb) return;
+    // Video screens: reveal the second rating, and move on once both are answered.
+    vb.classList.add('step2');
+    if (gs.every(groupValue)) {
+      var here = current;
+      setTimeout(function () { if (current === here) next(); }, reduce.matches ? 150 : 550);
+    }
   });
 
   document.addEventListener('keydown', function (e) {
