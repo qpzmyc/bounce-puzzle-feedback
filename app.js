@@ -17,6 +17,14 @@
   var current = 0;
   var activeGroup = null;
 
+  // Second-rating state of a video screen, and the skip link's wording to match:
+  // before any rating it skips the whole type, after the first it keeps that answer.
+  function setStep(vb, on) {
+    vb.classList.toggle('step2', on);
+    var sk = vb.querySelector('[data-skip]');
+    if (sk) sk.textContent = on ? 'Skip this one' : 'Haven’t seen these';
+  }
+
   function groupsIn(s) { return Array.prototype.slice.call(s.querySelectorAll('.rate')); }
   function groupValue(g) { var c = g.querySelector('input:checked'); return c ? c.value : null; }
 
@@ -51,7 +59,7 @@
     var gs = groupsIn(s);
     var vb = s.querySelector('.vbody');
     // A video screen shows its second rating once the first has an answer.
-    if (vb) vb.classList.toggle('step2', !!(gs[0] && groupValue(gs[0])));
+    if (vb) setStep(vb, !!(gs[0] && groupValue(gs[0])));
     activeGroup = gs.filter(function (g) { return !groupValue(g); })[0] || gs[0] || null;
     msg.hidden = true;
     window.scrollTo(0, 0);
@@ -68,9 +76,11 @@
     var sk = e.target.closest('[data-skip]');
     if (sk) {
       var ss = sk.closest('.screen');
-      Array.prototype.forEach.call(ss.querySelectorAll('input[type=radio]'), function (r) { r.checked = false; });
       var svb = ss.querySelector('.vbody');
-      if (svb) svb.classList.remove('step2');
+      // After the first rating, skipping keeps it and only leaves the second blank.
+      if (!(svb && svb.classList.contains('step2'))) {
+        Array.prototype.forEach.call(ss.querySelectorAll('input[type=radio]'), function (r) { r.checked = false; });
+      }
       next();
     }
   });
@@ -86,7 +96,7 @@
     var vb = g.closest('.vbody');
     if (!vb) return;
     // Video screens: reveal the second rating, and move on once both are answered.
-    vb.classList.add('step2');
+    setStep(vb, true);
     if (gs.every(groupValue)) {
       var here = current;
       setTimeout(function () { if (current === here) next(); }, reduce.matches ? 150 : 550);

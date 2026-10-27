@@ -124,17 +124,21 @@ h1, h2, p { margin: 0; }
 }
 .note::before { content: ""; display: block; width: 44px; height: 3px; border-radius: 3px; background: var(--ball); margin: 0 auto 4px; }
 .welcome { padding-top: 48px; padding-bottom: 48px; }
-.welcome .icon { width: 80px; height: 80px; border-radius: 19px; }
-.welcome .wordmark { margin: 14px 0 22px; }
-.welcome .wordmark img:first-child { width: 150px; }
-.welcome .wordmark img:last-child { width: 134px; }
+.welcome .icon { width: 72px; height: 72px; border-radius: 17px; }
+.welcome .wordmark { margin: 12px 0 22px; gap: 4px; }
+.welcome .wordmark img:first-child { width: 132px; }
+.welcome .wordmark img:last-child { width: 118px; }
+/* the note's first line is the personal one, so it leads */
+.note p { color: var(--soft); }
+.note p:first-child { color: var(--ink); font-weight: 600; font-size: 1.2rem; line-height: 1.35; }
 .welcome .actions { margin-top: 28px; }
 
 /* text screens sit near the top instead of floating mid-screen */
 .screen[data-screen="ai"], .screen[data-screen="else"], .screen[data-screen="name"] {
   justify-content: flex-start; padding-top: max(96px, 14dvh);
 }
-@media (hover: none) { .kbd-hint { display: none; } }
+@media (hover: none), (max-width: 899px) { .kbd-hint { display: none; } }
+.opt { white-space: nowrap; margin-left: 0; padding-left: 0.35em; }
 
 /* video screens: clip on top, text and ratings below, all centered */
 .vscreen { justify-content: center; padding: 58px 20px 20px; }
@@ -153,7 +157,7 @@ h1, h2, p { margin: 0; }
 @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 .step {
   display: inline-block; margin-right: 8px; padding: 3px 8px; border-radius: 999px;
-  font: 600 0.8125rem/1.2 var(--text); color: var(--teal); background: rgba(78, 205, 196, 0.12);
+  font: 600 0.8125rem/1.2 var(--text); color: var(--soft); background: rgba(255, 255, 255, 0.1);
   vertical-align: 1px;
 }
 .vbody .desc { font-size: 1rem; line-height: 1.4; margin-bottom: 0; }
@@ -237,7 +241,11 @@ h1, h2, p { margin: 0; }
   }
   .actions.dock .btn.primary { width: 100%; min-height: 54px; padding: 0 24px; font-size: 1.05rem; }
   .screen:has(.dock) { padding-bottom: 104px; }
-  .vscreen { padding-bottom: 150px; }
+  /* video screens: top-anchored so revealing the second rating never moves the clip */
+  .vscreen { justify-content: flex-start; padding-top: 64px; padding-bottom: 84px; }
+  .clip { height: clamp(200px, 31dvh, 300px); }
+  .vdock { padding-top: 22px; }
+  .vdock .btn.ghost { align-self: center; }
 }
 
 /* very narrow phones */
