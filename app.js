@@ -17,12 +17,11 @@
   var current = 0;
   var activeGroup = null;
 
-  // Second-rating state of a video screen, and the skip link's wording to match:
-  // before any rating it skips the whole type, after the first it keeps that answer.
+  // Second-rating state of a video screen: its row is dimmed and its inputs
+  // locked until the first rating has an answer.
   function setStep(vb, on) {
     vb.classList.toggle('step2', on);
-    var sk = vb.querySelector('[data-skip]');
-    if (sk) sk.textContent = on ? 'Skip this one' : 'Haven’t seen these';
+    Array.prototype.forEach.call(vb.querySelectorAll('.later input'), function (r) { r.disabled = !on; });
   }
 
   function groupsIn(s) { return Array.prototype.slice.call(s.querySelectorAll('.rate')); }
