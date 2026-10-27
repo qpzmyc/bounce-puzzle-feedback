@@ -138,7 +138,7 @@ h1, h2, p { margin: 0; }
   justify-content: flex-start; padding-top: max(96px, 14dvh);
 }
 @media (hover: none), (max-width: 899px) { .kbd-hint { display: none; } }
-.opt { white-space: nowrap; margin-left: 0; padding-left: 0.35em; }
+.opt { white-space: nowrap; }
 
 /* video screens: clip on top, text and ratings below, all centered */
 .vscreen { justify-content: center; padding: 58px 20px 20px; }
@@ -191,7 +191,7 @@ h1, h2, p { margin: 0; }
 .field { display: block; margin: 18px 0 8px; font: 600 1rem/1.4 var(--text); }
 .card + .field { margin-top: 4px; }
 .rate + .field { margin-top: 28px; }
-.opt { font-weight: 500; color: var(--soft); font-size: 1rem; margin-left: 6px; }
+.opt { font-weight: 500; color: var(--soft); font-size: 1rem; padding-left: 0.35em; }
 .text {
   width: 100%; min-height: 52px; padding: 13px 16px; border-radius: 14px;
   background: var(--surface); color: var(--ink); border: 2px solid var(--line);
