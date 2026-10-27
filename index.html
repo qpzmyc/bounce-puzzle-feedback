@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bounce Puzzle feedback</title>
+<meta name="description" content="Rate a few kinds of Bounce Puzzle videos. Takes about a minute.">
+<meta name="theme-color" content="#0f0f1a">
+<link rel="icon" href="assets/icon.png">
+<link rel="apple-touch-icon" href="assets/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800;900&family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="ground" aria-hidden="true"><i class="orb o1"></i><i class="orb o2"></i><i class="orb o3"></i><i class="dots"></i></div>
+<header class="top">
+  <div class="bar" role="progressbar" aria-label="Progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i></i><b></b></div>
+  <button type="button" class="back" id="back" aria-label="Back" hidden>
+    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+</header>
+
+<main>
+  <form id="form" novalidate>
+
+    <section class="screen welcome" data-screen="welcome" aria-labelledby="t-welcome">
+      <img class="icon" src="assets/icon.png" width="112" height="112" alt="Bounce Puzzle app icon">
+      <h1 id="t-welcome" tabindex="-1" class="wordmark" aria-label="Bounce Puzzle">
+        <img src="assets/bounce.png" alt="" width="716" height="123"><img src="assets/puzzle.png" alt="" width="642" height="120">
+      </h1>
+      <!-- Cheng's note: UNAPPROVED DRAFT, Cheng approves the wording before Thursday -->
+      <div class="note">
+        <p>Hey, I'm Cheng. I made Bounce Puzzle, and I post videos of it every week</p>
+        <p>Rate a few kinds of videos so I know what to make more of</p>
+        <p>It takes about a minute, and honest answers help the most</p>
+      </div>
+      <div class="actions center">
+        <button type="button" class="btn primary big" data-next>Start</button>
+        <p class="fine">Takes about a minute</p>
+      </div>
+    </section>
+
+    <section class="screen vscreen" data-screen="video" aria-labelledby="t-story" hidden>
+      <div class="vlayout">
+        <div class="clip"><video src="clips/story.mp4" poster="clips/story.jpg" autoplay muted loop playsinline preload="none" aria-label="Example clip: Story videos"></video></div>
+        <div class="vbody">
+          <p class="kicker">Video type 1 of 4</p>
+          <h2 class="card" id="t-story" tabindex="-1">Story <em>videos</em></h2>
+          <p class="desc">A story read out loud, with gameplay playing behind it.</p>
+          <fieldset class="rate">
+            <legend>I’d watch it to the end</legend>
+            <div class="scale"><label class="pip"><input type="radio" name="entry.949945115" value="1"><span>1</span></label><label class="pip"><input type="radio" name="entry.949945115" value="2"><span>2</span></label><label class="pip"><input type="radio" name="entry.949945115" value="3"><span>3</span></label><label class="pip"><input type="radio" name="entry.949945115" value="4"><span>4</span></label><label class="pip"><input type="radio" name="entry.949945115" value="5"><span>5</span></label></div>
+            <div class="ends"><span>Not at all</span><span>Definitely</span></div>
+          </fieldset>
+          <fieldset class="rate">
+            <legend>It makes me want to play the game</legend>
+            <div class="scale"><label class="pip"><input type="radio" name="entry.928763036" value="1"><span>1</span></label><label class="pip"><input type="radio" name="entry.928763036" value="2"><span>2</span></label><label class="pip"><input type="radio" name="entry.928763036" value="3"><span>3</span></label><label class="pip"><input type="radio" name="entry.928763036" value="4"><span>4</span></label><label class="pip"><input type="radio" name="entry.928763036" value="5"><span>5</span></label></div>
+            <div class="ends"><span>Not at all</span><span>Definitely</span></div>
+          </fieldset>
+          <div class="actions">
+            <button type="button" class="btn primary" data-next>Next</button>
+            <button type="button" class="btn ghost" data-skip>Haven’t seen these</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen vscreen" data-screen="video" aria-labelledby="t-can-you-solve" hidden>
+      <div class="vlayout">
+        <div class="clip"><video src="clips/can-you-solve.mp4" poster="clips/can-you-solve.jpg" autoplay muted loop playsinline preload="none" aria-label="Example clip: Can you solve this?"></video></div>
+        <div class="vbody">
+          <p class="kicker">Video type 2 of 4</p>
+          <h2 class="card" id="t-can-you-solve" tabindex="-1">Can you solve <em>this?</em></h2>
+          <p class="desc">A frozen puzzle with the question on it, then the solution.</p>
+          <fieldset class="rate">
+            <legend>I’d watch it to the end</legend>
+            <div class="scale"><label class="pip"><input type="radio" name="entry.828216198" value="1"><span>1</span></label><label class="pip"><input type="radio" name="entry.828216198" value="2"><span>2</span></label><label class="pip"><input type="radio" name="entry.828216198" value="3"><span>3</span></label><label class="pip"><input type="radio" name="entry.828216198" value="4"><span>4</span></label><label class="pip"><input type="radio" name="entry.828216198" value="5"><span>5</span></label></div>
+            <div class="ends"><span>Not at all</span><span>Definitely</span></div>
+          </fieldset>
+          <fieldset class="rate">
+            <legend>It makes me want to play the game</legend>
+            <div class="scale"><label class="pip"><input type="radio" name="entry.1393132804" value="1"><span>1</span></label><label class="pip"><input type="radio" name="entry.1393132804" value="2"><span>2</span></label><label class="pip"><input type="radio" name="entry.1393132804" value="3"><span>3</span></label><label class="pip"><input type="radio" name="entry.1393132804" value="4"><span>4</span></label><label class="pip"><input type="radio" name="entry.1393132804" value="5"><span>5</span></label></div>
+            <div class="ends"><span>Not at all</span><span>Definitely</span></div>
+          </fieldset>
+          <div class="actions">
+            <button type="button" class="btn primary" data-next>Next</button>
+            <button type="button" class="btn ghost" data-skip>Haven’t seen these</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen vscreen" data-screen="video" aria-labelledby="t-fails-then-win" hidden>
+      <div class="vlayout">
+        <div class="clip"><video src="clips/fails-then-win.mp4" poster="clips/fails-then-win.jpg" autoplay muted loop playsinline preload="none" aria-label="Example clip: How many tries would it take you?"></video></div>
+        <div class="vbody">
+          <p class="kicker">Video type 3 of 4</p>
+          <h2 class="card" id="t-fails-then-win" tabindex="-1">How many <em>tries would it take you?</em></h2>
+          <p class="desc">A string of failed attempts, counting up, then the win.</p>
+          <fieldset class="rate">
+            <legend>I’d watch it to the end</legend>
+            <div class="scale"><label class="pip"><input type="radio" name="entry.215401540" value="1"><span>1</span></label><label class="pip"><input type="radio" name="entry.215401540" value="2"><span>2</span></label><label class="pip"><input type="radio" name="entry.215401540" value="3"><span>3</span></label><label class="pip"><input type="radio" name="entry.215401540" value="4"><span>4</span></label><label class="pip"><input type="radio" name="entry.215401540" value="5"><span>5</span></label></div>
+            <div class="ends"><span>Not at all</span><span>Definitely</span></div>
+          </fieldset>
+          <fieldset class="rate">
+            <legend>It makes me want to play the game</legend>
+            <div class="scale"><label class="pip"><input type="radio" name="entry.1863536100" value="1"><span>1</span></label><label class="pip"><input type="radio" name="entry.1863536100" value="2"><span>2</span></label><label class="pip"><input type="radio" name="entry.1863536100" value="3"><span>3</span></label><label class="pip"><input type="radio" name="entry.1863536100" value="4"><span>4</span></label><label class="pip"><input type="radio" name="entry.1863536100" value="5"><span>5</span></label></div>
+            <div class="ends"><span>Not at all</span><span>Definitely</span></div>
+          </fieldset>
+          <div class="actions">
+            <button type="button" class="btn primary" data-next>Next</button>
+            <button type="button" class="btn ghost" data-skip>Haven’t seen these</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen vscreen" data-screen="video" aria-labelledby="t-which-layout" hidden>
+      <div class="vlayout">
+        <div class="clip"><video src="clips/which-layout.mp4" poster="clips/which-layout.jpg" autoplay muted loop playsinline preload="none" aria-label="Example clip: Which one wins?"></video></div>
+        <div class="vbody">
+          <p class="kicker">Video type 4 of 4</p>
+          <h2 class="card" id="t-which-layout" tabindex="-1">Which one <em>wins?</em></h2>
+          <p class="desc">Two to four layouts racing side by side, then the winner zooms in.</p>
+          <fieldset class="rate">
+            <legend>I’d watch it to the end</legend>
+            <div class="scale"><label class="pip"><input type="radio" name="entry.328647743" value="1"><span>1</span></label><label class="pip"><input type="radio" name="entry.328647743" value="2"><span>2</span></label><label class="pip"><input type="radio" name="entry.328647743" value="3"><span>3</span></label><label class="pip"><input type="radio" name="entry.328647743" value="4"><span>4</span></label><label class="pip"><input type="radio" name="entry.328647743" value="5"><span>5</span></label></div>
+            <div class="ends"><span>Not at all</span><span>Definitely</span></div>
+          </fieldset>
+          <fieldset class="rate">
+            <legend>It makes me want to play the game</legend>
+            <div class="scale"><label class="pip"><input type="radio" name="entry.1212684725" value="1"><span>1</span></label><label class="pip"><input type="radio" name="entry.1212684725" value="2"><span>2</span></label><label class="pip"><input type="radio" name="entry.1212684725" value="3"><span>3</span></label><label class="pip"><input type="radio" name="entry.1212684725" value="4"><span>4</span></label><label class="pip"><input type="radio" name="entry.1212684725" value="5"><span>5</span></label></div>
+            <div class="ends"><span>Not at all</span><span>Definitely</span></div>
+          </fieldset>
+          <div class="actions">
+            <button type="button" class="btn primary" data-next>Next</button>
+            <button type="button" class="btn ghost" data-skip>Haven’t seen these</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" data-screen="ai" aria-labelledby="t-ai" hidden>
+      <div class="col">
+        <p class="kicker">Last few</p>
+        <h2 class="card" id="t-ai" tabindex="-1">Did any of the videos feel <em>AI-made?</em></h2>
+        <fieldset class="rate">
+            <legend>How AI-made did they feel?</legend>
+            <div class="scale"><label class="pip"><input type="radio" name="entry.428349219" value="1"><span>1</span></label><label class="pip"><input type="radio" name="entry.428349219" value="2"><span>2</span></label><label class="pip"><input type="radio" name="entry.428349219" value="3"><span>3</span></label><label class="pip"><input type="radio" name="entry.428349219" value="4"><span>4</span></label><label class="pip"><input type="radio" name="entry.428349219" value="5"><span>5</span></label></div>
+            <div class="ends"><span>Not at all</span><span>Very</span></div>
+          </fieldset>
+        <label class="field" for="why">What gave it away? <span class="opt">Optional</span></label>
+        <input class="text" id="why" type="text" name="entry.1812912766" maxlength="300" autocomplete="off" placeholder="The voice, the visuals, the words, anything">
+        <div class="actions">
+          <button type="button" class="btn primary" data-next>Next</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" data-screen="else" aria-labelledby="t-else" hidden>
+      <div class="col">
+        <h2 class="card" id="t-else" tabindex="-1">Anything <em>else?</em></h2>
+        <label class="field" for="more">Good or bad, about the videos or the game. <span class="opt">Optional</span></label>
+        <textarea class="text" id="more" name="entry.95448944" rows="6" maxlength="3000"></textarea>
+        <p class="fine left kbd-hint">Ctrl or Cmd plus Enter to continue</p>
+        <div class="actions">
+          <button type="button" class="btn primary" data-next>Next</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" data-screen="name" aria-labelledby="t-name" hidden>
+      <div class="col">
+        <h2 class="card" id="t-name" tabindex="-1">Your <em>name</em> (optional)</h2>
+        <label class="field" for="who">Only if you're fine with Cheng following up.</label>
+        <input class="text" id="who" type="text" name="entry.792023968" maxlength="100" autocomplete="name" placeholder="First name is fine">
+        <p class="msg" id="msg" role="alert" hidden></p>
+        <div class="actions">
+          <button type="submit" class="btn primary big" id="send">Send my answers</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen thanks" data-screen="thanks" aria-labelledby="t-thanks" hidden>
+      <div class="col center">
+        <img class="icon hop" src="assets/icon.png" width="96" height="96" alt="">
+        <h2 class="card" id="t-thanks" tabindex="-1">Thanks. I read <em>every</em> answer.</h2>
+        <p class="desc">If you haven't played it yet, it's free on the App Store.</p>
+        <a class="badge" href="https://apps.apple.com/us/app/bounce-puzzle-platform-jump/id6757413117" target="_blank" rel="noopener"><img src="assets/app-store-badge.svg" width="168" height="56" alt="Download on the App Store"></a>
+        <p class="fine" id="dry" hidden>Dry run. Nothing was sent.</p>
+      </div>
+    </section>
+
+  </form>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
