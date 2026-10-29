@@ -31,7 +31,13 @@
     seen: 'entry.1326805459', played: 'entry.1262496214', far: 'entry.1677435559', where: 'entry.1924391642',
     else: 'entry.1884087134', name: 'entry.1343568917'
   };
-  var DRY = new URLSearchParams(location.search).get('dry') === '1';
+  var QUERY = new URLSearchParams(location.search);
+  // ?cheng=1 shows Cheng's own answers as text to copy, instead of sending them.
+  var CHENG_MODE = QUERY.get('cheng') === '1';
+  var DRY = QUERY.get('dry') === '1' || CHENG_MODE;
+  // Cheng's own picks, recorded with ?cheng=1, for "you agreed with Cheng" on
+  // the result card. Null until he records them, and the line stays hidden.
+  var CHENG = null;
 
   // ---- What the page asks ------------------------------------------------
 
@@ -163,7 +169,7 @@
   function slider(key, question, left, right) {
     var w = el('div', 'slider');
     var id = 's-' + key;
-    w.innerHTML = '<div class="s-top"><label for="' + id + '">' + question + '</label><output class="s-val" for="' + id + '">–</output></div>' +
+    w.innerHTML = '<div class="s-top"><label class="sr-only" for="' + id + '">' + question + '</label><output class="s-val" for="' + id + '"></output></div>' +
       '<input id="' + id + '" type="range" min="0" max="100" step="5" value="50">' +
       '<div class="ends"><span>' + left + '</span><span>' + right + '</span></div>';
     var input = w.querySelector('input');
@@ -172,7 +178,7 @@
       var on = answers[key] != null;
       w.classList.toggle('set', on);
       if (on) input.value = answers[key];
-      out.textContent = on ? answers[key] + '%' : '–';
+      out.textContent = on ? answers[key] + '%' : 'Drag to answer';
       input.style.setProperty('--fill', (on ? answers[key] : 0) + '%');
     }
     function take() { answers[key] = Number(input.value); show(); }
@@ -252,7 +258,7 @@
     var cells = items.map(function (it, i) {
       var b = el('button', 'r-item');
       b.type = 'button';
-      b.innerHTML = render(it, i) + '<i class="r-num" aria-hidden="true"></i>';
+      b.innerHTML = render(it, i) + '<i class="r-num" aria-hidden="true"></i><span class="sr-only r-state"></span>';
       b.addEventListener('click', function () {
         var at = order.indexOf(i);
         if (at >= 0) order = order.slice(0, at); else order.push(i);
@@ -273,10 +279,10 @@
         var at = order.indexOf(i);
         c.classList.toggle('ranked', at >= 0);
         c.querySelector('.r-num').textContent = at >= 0 ? at + 1 : '';
-        c.setAttribute('aria-label', (at >= 0 ? 'Ranked ' + (at + 1) + '. ' : '') + 'Tap to rank');
+        c.querySelector('.r-state').textContent = at >= 0 ? ', ranked ' + (at + 1) : ', not ranked yet';
       });
       var left = items.length - order.length;
-      hint.textContent = !order.length ? 'Tap your favourite first' : left ? 'Next favourite. ' + left + ' to go' : 'All ranked';
+      hint.textContent = !order.length ? '' : left ? 'Next favourite. ' + left + ' to go' : 'All ranked';
       clear.hidden = !order.length;
     }
     w.appendChild(foot);
@@ -292,10 +298,13 @@
     d.appendChild(b);
     return d;
   }
-  function head(s, title) {
+  // Screen header: the part name, then the question in a speech bubble from the game icon.
+  function head(s, title, desc) {
     var h = '';
     if (s.part) h += '<p class="kicker">' + s.part + (s.step ? ' · ' + s.step : '') + '</p>';
-    return h + '<h2 class="card" tabindex="-1">' + title + '</h2>';
+    return h + '<div class="ask"><img class="ask-icon" src="assets/icon.png" width="44" height="44" alt="">' +
+      '<div class="bubble"><h2 class="card" tabindex="-1">' + title + '</h2>' +
+      (desc ? '<p class="desc">' + desc + '</p>' : '') + '</div></div>';
   }
   // Tabs over one player, for screens that compare versions of a clip.
   function tabbed(options, sound) {
@@ -336,7 +345,7 @@
     },
     'rank-hooks': function (s, sec) {
       var col = el('div', 'col wide');
-      col.innerHTML = head(s, 'Rank the <em>openings</em>') + '<p class="desc">Tap them from best to worst.</p>';
+      col.innerHTML = head(s, 'Rank the <em>openings</em>', 'Tap them from best to worst.');
       col.appendChild(ranker('p1_rank', HOOKS, function (h) {
         return '<img src="clips/' + h.clip + '.jpg" alt=""><span>' + esc(h.name) + '</span>';
       }, 'thumbs'));
@@ -349,7 +358,7 @@
       var tb = tabbed(t.edits.map(function (n, i) { return ['edit-' + t.dir + '-' + 'abc'[i], n]; }), true);
       lay.appendChild(tb.box);
       var body = el('div', 'vbody');
-      body.innerHTML = head(s, t.title) + '<p class="desc">Three ways to edit the same video. Watch each, then pick.</p>';
+      body.innerHTML = head(s, t.title, t.edits.length + ' ways to edit the same video. Watch each, then pick.');
       body.appendChild(choice('p2_' + t.id + '_watch', 'Which would you rather watch?', t.edits));
       body.appendChild(choice('p2_' + t.id + '_download', 'Which makes you most likely to download the game?', t.edits));
       body.appendChild(dock());
@@ -359,7 +368,7 @@
     },
     'rank-plots': function (s, sec) {
       var col = el('div', 'col wide');
-      col.innerHTML = head(s, 'Which stories would you <em>watch?</em>') + '<p class="desc">Tap them from the one you’d most want to hear to the least.</p>';
+      col.innerHTML = head(s, 'Which stories would you <em>watch?</em>', 'Tap them from the one you’d most want to hear to the least.');
       col.appendChild(ranker('p3_plots', PLOTS, function (p) { return '<span>' + esc(p) + '</span>'; }, 'texts'));
       col.appendChild(dock());
       sec.appendChild(col);
@@ -369,40 +378,66 @@
       var tb = tabbed(s.options, s.sound);
       lay.appendChild(tb.box);
       var body = el('div', 'vbody');
-      body.innerHTML = head(s, s.title) + '<p class="desc">' + (s.needSound ? 'Turn your sound on for this one. ' : '') + 'Same story each time, only this changes.</p>';
+      body.innerHTML = head(s, s.title, (s.needSound ? 'Turn your sound on for this one. ' : '') + 'Same story each time, only this changes.');
       body.appendChild(choice(s.key, 'Your pick', s.options.map(function (o) { return o[1]; })));
       body.appendChild(dock());
       lay.appendChild(body);
       sec.appendChild(lay);
       sec.players = [tb.player];
     },
+    // One clip at a time, with its own count. Next and Back step through the
+    // clips before leaving the screen, and both ratings in moves on by itself.
     review: function (s, sec) {
-      var col = el('div', 'col wide');
-      col.innerHTML = head(s, 'Looking <em>back</em>') + '<p class="desc">One last pass over what you watched. Tap a clip to see it again.</p>';
-      var list = el('div', 'review');
-      col.appendChild(list);
-      col.appendChild(dock());
-      sec.appendChild(col);
-      // Rebuilt each time the screen opens, so it shows the edits they picked.
-      sec.onShow = function () {
-        list.innerHTML = '';
-        reviewItems().forEach(function (it) {
-          var c = el('div', 'r-card');
-          var th = el('button', 'r-thumb', '<img src="clips/' + it.clip + '.jpg" alt=""><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5l11 7-11 7z" fill="currentColor"/></svg>');
-          th.type = 'button';
-          th.setAttribute('aria-label', 'Watch ' + it.name + ' again');
-          th.addEventListener('click', function () { openSheet(it.clip, it.sound); });
-          var bx = el('div', 'r-body', '<p class="r-name">' + esc(it.name) + '</p>');
-          bx.appendChild(rate5('p4_' + it.id + '_download', 'Makes me want to download it', 'Not at all', 'Definitely'));
-          bx.appendChild(rate5('p4_' + it.id + '_ai', 'Feels AI-made', 'Not at all', 'Completely'));
-          c.appendChild(th); c.appendChild(bx);
-          list.appendChild(c);
+      var lay = el('div', 'vlayout');
+      var side = el('div', 'vside');
+      var p = player(HOOKS[0].clip, { sound: true });
+      side.appendChild(p);
+      lay.appendChild(side);
+      var body = el('div', 'vbody');
+      var top = el('div');
+      var rates = el('div');
+      body.appendChild(top);
+      body.appendChild(rates);
+      var d = dock();
+      body.appendChild(d);
+      lay.appendChild(body);
+      sec.appendChild(lay);
+      sec.players = [p];
+      var items = [], at = 0, timer = null;
+      function render() {
+        clearTimeout(timer);
+        var it = items[at];
+        top.innerHTML = head({ part: 'Looking back', step: (at + 1) + ' of ' + items.length }, esc(it.name));
+        rates.innerHTML = '';
+        var keys = ['p4_' + it.id + '_download', 'p4_' + it.id + '_ai'];
+        function check() {
+          if (answers[keys[0]] && answers[keys[1]]) timer = setTimeout(next, 550);
+        }
+        [rate5(keys[0], 'Makes me want to download it', 'Not at all', 'Definitely'),
+         rate5(keys[1], 'Feels AI-made', 'Not at all', 'Completely')].forEach(function (r) {
+          r.addEventListener('click', function (e) { if (e.target.closest('.r5')) check(); });
+          rates.appendChild(r);
         });
+        p.load(it.clip);
+        p.querySelector('.p-sound').hidden = !it.sound;
+        p.sync();
+        p.play();
+        var h = top.querySelector('[tabindex="-1"]');
+        if (h) h.focus({ preventScroll: true });
+      }
+      // Rebuilt each time the screen opens from before, so it shows the edits they picked.
+      sec.onShow = function (dir) {
+        items = reviewItems();
+        at = dir < 0 ? items.length - 1 : 0;
+        render();
       };
+      sec.next = function () { if (at < items.length - 1) { at++; render(); progress(); return true; } clearTimeout(timer); return false; };
+      sec.back = function () { if (at > 0) { at--; render(); progress(); return true; } clearTimeout(timer); return false; };
+      sec.fraction = function () { return items.length ? at / items.length : 0; };
     },
     about: function (s, sec) {
       var col = el('div', 'col');
-      col.innerHTML = '<p class="kicker">Last bit</p><h2 class="card" tabindex="-1">About <em>you</em></h2>';
+      col.innerHTML = head({ part: 'Last bit' }, 'About <em>you</em>');
       var far;
       col.appendChild(choice('seen', 'Have you seen Bounce Puzzle videos on social media?', ['Yes, a lot', 'A few times', 'No']));
       col.appendChild(choice('played', 'Have you played Bounce Puzzle?', ['Still playing', 'Tried it', 'Not yet'], function (i) {
@@ -426,15 +461,81 @@
       col.querySelector('#more').addEventListener('input', function (e) { answers.else = e.target.value; });
       col.querySelector('#who').addEventListener('input', function (e) { answers.name = e.target.value; });
     },
+    // The ending: a taste card built from their answers, a share button, and the App Store link.
     thanks: function (s, sec) {
       sec.classList.add('thanks');
-      sec.innerHTML = '<div class="col center"><img class="icon hop" src="assets/icon.png" width="96" height="96" alt="">' +
-        '<h2 class="card" tabindex="-1">Thank <em>you</em></h2>' +
-        '<p class="desc">If you haven’t played it yet, it’s free on the App Store.</p>' +
-        '<a class="badge" href="https://apps.apple.com/us/app/bounce-puzzle-platform-jump/id6757413117" target="_blank" rel="noopener"><img src="assets/app-store-badge.svg" width="168" height="56" alt="Download on the App Store"></a>' +
-        '<p class="fine" id="dry" hidden>Dry run. Nothing was sent.</p></div>';
+      var col = el('div', 'col center');
+      sec.appendChild(col);
+      sec.onShow = function () {
+        var t = taste();
+        var stats = [];
+        if (t.hook) stats.push(['Kept watching most', esc(t.hook.name) + ' <small>' + answers['p1_' + t.hook.id] + '%</small>']);
+        var picks = TYPES.map(function (ty) { var a = answers['p2_' + ty.id + '_watch']; return a ? esc(a.slice(3)) : null; }).filter(Boolean);
+        if (picks.length) stats.push(['Edits you’d watch', picks.join(', ')]);
+        var plots = answers.p3_plots;
+        if (plots) stats.push(['Story you’d hear first', esc(firstWords(plots.split(' | ')[0].slice(3), 9))]);
+        var agree = agreement();
+        if (agree) stats.push(['Agreed with Cheng', agree[0] + ' of ' + agree[1]]);
+        col.innerHTML =
+          '<div class="result" style="--accent:' + t.color + '">' +
+            '<div class="res-art" aria-hidden="true">' + ART + '</div>' +
+            '<p class="res-kicker">Your video taste</p>' +
+            '<h2 class="res-name" tabindex="-1">' + t.name + '</h2>' +
+            '<p class="res-line">' + t.line + '</p>' +
+            (stats.length ? '<dl class="res-stats">' + stats.map(function (x) { return '<div><dt>' + x[0] + '</dt><dd>' + x[1] + '</dd></div>'; }).join('') + '</dl>' : '') +
+            '<p class="res-foot"><img src="assets/icon.png" width="28" height="28" alt="">Bounce Puzzle</p>' +
+          '</div>' +
+          '<p class="res-ask">Thanks for helping. Send it to a friend and see what taste they get.</p>' +
+          '<div class="actions center"><button type="button" class="btn primary big" id="share">Send to a friend</button></div>' +
+          '<p class="fine" id="share-note" role="status"></p>' +
+          '<a class="badge" href="https://apps.apple.com/us/app/bounce-puzzle-platform-jump/id6757413117" target="_blank" rel="noopener"><img src="assets/app-store-badge.svg" width="168" height="56" alt="Download on the App Store"></a>' +
+          (DRY ? '<p class="fine">Dry run. Nothing was sent.</p>' : '') +
+          (CHENG_MODE ? '<label class="field" for="mine">Your answers, for Claude</label><textarea class="text" id="mine" rows="8" readonly>' + esc(JSON.stringify(answers)) + '</textarea>' : '');
+        col.querySelector('#share').addEventListener('click', function () { share(t); });
+      };
     }
   };
+
+  // ---- The taste card --------------------------------------------------------
+
+  // Small game scene for the top of the card: a dotted arc from the ball to the goal.
+  var ART = '<svg viewBox="0 0 320 120"><path d="M40 30 Q150 -10 200 60 T290 92" fill="none" stroke="currentColor" stroke-width="5" stroke-dasharray="2 14" stroke-linecap="round"/>' +
+    '<circle cx="40" cy="30" r="15" fill="#ff6b6b"/><rect x="150" y="70" width="70" height="12" rx="6" transform="rotate(24 185 76)" fill="#4ecdc4"/>' +
+    '<rect x="268" y="80" width="40" height="28" rx="8" fill="#95e77e"/></svg>';
+  // One type per opening, picked by whichever they would keep watching longest.
+  var TASTES = {
+    attempt: { name: 'The Grinder', color: '#ff6b6b', line: 'You stay for the struggle. Seventy-eight tries in, you want to see try seventy-nine.' },
+    nearmiss: { name: 'The Slow-mo Snob', color: '#a78bfa', line: 'You live for the almost. One pixel off the goal is your favourite place.' },
+    pov: { name: 'The Relatable One', color: '#4ecdc4', line: 'If it feels like you, you watch it. Stuck on a level for an hour? Been there.' },
+    zoom: { name: 'The Big Picture', color: '#ffc83d', line: 'You need to see the whole board before you care.' },
+    plain: { name: 'The No-Nonsense Viewer', color: '#95e77e', line: 'No intro, no gimmick. Just show you the level.' },
+    story: { name: 'The Storyteller', color: '#f472b6', line: 'Put a good story on top and you’ll watch anything.' }
+  };
+  function taste() {
+    var best = null;
+    HOOKS.forEach(function (h) { var v = answers['p1_' + h.id]; if (v != null && (!best || v > answers['p1_' + best.id])) best = h; });
+    if (!best) return { name: 'The Mystery Viewer', color: '#8c8cc4', line: 'You skipped the ratings, so your taste stays a secret.', hook: null };
+    var t = TASTES[best.id];
+    return { name: t.name, color: t.color, line: t.line, hook: best };
+  }
+  function firstWords(s, n) { var w = s.split(' '); return w.length > n ? w.slice(0, n).join(' ') + '…' : s; }
+  // [matches, compared] over the pick questions both they and Cheng answered.
+  function agreement() {
+    if (!CHENG) return null;
+    var keys = ['p2_cys_watch', 'p2_wl_watch', 'p2_ftw_watch', 'p2_cys_download', 'p2_wl_download', 'p2_ftw_download', 'p3_caption', 'p3_hook', 'p3_narration'];
+    var n = 0, same = 0;
+    keys.forEach(function (k) { if (answers[k] && CHENG[k]) { n++; if (answers[k] === CHENG[k]) same++; } });
+    return n ? [same, n] : null;
+  }
+  // The phone's share sheet where there is one, otherwise copy the link.
+  function share(t) {
+    var url = location.origin + location.pathname;
+    var note = document.getElementById('share-note');
+    var text = 'Rate Bounce Puzzle’s videos and find your video taste. I got ' + t.name + '.';
+    if (navigator.share) { navigator.share({ title: 'Bounce Puzzle', text: text, url: url }).catch(function () {}); return; }
+    if (navigator.clipboard) navigator.clipboard.writeText(text + ' ' + url).then(function () { note.textContent = 'Link copied. Paste it to a friend.'; }, function () { note.textContent = url; });
+    else note.textContent = url;
+  }
 
   // The videos for the looking-back screen: every opening, then the edit they
   // said they'd rather watch for each video type.
@@ -470,21 +571,40 @@
     current = i;
     // The first screen shows at once: a fade-in from nothing delays its first paint.
     if (!reduce.matches && dir) { void s.offsetWidth; s.classList.add(dir < 0 ? 'enter-back' : 'enter-fwd'); }
-    if (s.onShow) s.onShow();
     // Only this screen's clip plays.
     document.querySelectorAll('.player').forEach(function (p) { if (!s.contains(p) && p.stop) p.stop(); });
-    (s.players || []).forEach(function (p) { p.sync(); p.play(); });
-    var pct = i >= last ? 100 : Math.round(i / (last - 1) * 100);
-    bar.querySelector('i').style.width = pct + '%';
-    bar.querySelector('b').style.left = pct + '%';
-    bar.setAttribute('aria-valuenow', pct);
+    if (s.onShow) s.onShow(dir);
+    else (s.players || []).forEach(function (p) { p.sync(); p.play(); });
+    progress();
     backBtn.hidden = i === 0 || i === last;
+    bar.parentNode.hidden = i === 0;
     window.scrollTo(0, 0);
     var h = s.querySelector('[tabindex="-1"]');
     if (h) h.focus({ preventScroll: true });
   }
-  function next() { if (current < screens.length - 2) show(current + 1, 1); }
-  function back() { if (current > 0 && current < screens.length - 1) show(current - 1, -1); }
+  // Fills fast early and slower later, which keeps more people going than an
+  // even bar (Villar et al. 2013), and hops the ball on every move.
+  function progress() {
+    var last = screens.length - 1;
+    var s = screens[current];
+    var x = current >= last ? 1 : (current + (s.fraction ? s.fraction() : 0)) / (last - 1);
+    var pct = Math.round(Math.pow(Math.min(x, 1), 0.75) * 100);
+    var ball = bar.querySelector('b');
+    bar.querySelector('i').style.width = pct + '%';
+    ball.style.left = 'clamp(9px, ' + pct + '%, calc(100% - 9px))';
+    bar.setAttribute('aria-valuenow', pct);
+    if (!reduce.matches) { ball.classList.remove('hop'); void ball.offsetWidth; ball.classList.add('hop'); }
+  }
+  function next() {
+    var s = screens[current];
+    if (s.next && s.next()) return;
+    if (current < screens.length - 2) show(current + 1, 1);
+  }
+  function back() {
+    var s = screens[current];
+    if (s.back && s.back()) return;
+    if (current > 0 && current < screens.length - 1) show(current - 1, -1);
+  }
 
   document.addEventListener('click', function (e) { if (e.target.closest('[data-next]')) next(); });
   backBtn.addEventListener('click', back);
@@ -557,7 +677,6 @@
     var sendBtn = document.getElementById('send');
     sendBtn.disabled = false;
     sendBtn.textContent = 'Send my answers';
-    if (DRY) document.getElementById('dry').hidden = false;
     show(screens.length - 1, 1);
   }
 
