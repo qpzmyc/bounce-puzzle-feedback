@@ -29,13 +29,14 @@ QUESTIONS += [("p3_plots", "Part 3. Story plots ranked, best first", True),
               ("p3_hook", "Part 3. Story opening", False),
               ("p3_narration", "Part 3. Narration speed", False)]
 for k, n in HOOKS:
-    QUESTIONS += [(f"p4_{k}_download", f"Part 4. {n}: makes me want to download (%)", False),
-                  (f"p4_{k}_ai", f"Part 4. {n}: feels AI-made (%)", False)]
+    QUESTIONS += [(f"p4_{k}_download", f"Part 4. {n}: makes me want to download (1 to 5)", False),
+                  (f"p4_{k}_ai", f"Part 4. {n}: feels AI-made (1 to 5)", False)]
 for k, _, names in EDITS:
     for letter, n in zip("abc", names):
-        QUESTIONS += [(f"p4_{k}_{letter}_download", f"Part 4. {n}: makes me want to download (%)", False),
-                      (f"p4_{k}_{letter}_ai", f"Part 4. {n}: feels AI-made (%)", False)]
-QUESTIONS += [("played", "Have you played Bounce Puzzle?", False),
+        QUESTIONS += [(f"p4_{k}_{letter}_download", f"Part 4. {n}: makes me want to download (1 to 5)", False),
+                      (f"p4_{k}_{letter}_ai", f"Part 4. {n}: feels AI-made (1 to 5)", False)]
+QUESTIONS += [("seen", "Have you seen Bounce Puzzle videos on social media?", False),
+              ("played", "Have you played Bounce Puzzle?", False),
               ("far", "How far did you get?", False),
               ("where", "Where do you watch short videos most?", False),
               ("else", "Anything else?", True),

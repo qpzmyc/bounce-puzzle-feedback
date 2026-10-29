@@ -28,7 +28,7 @@
     p4_ftw_a_download: 'entry.224541826', p4_ftw_a_ai: 'entry.107544750',
     p4_ftw_b_download: 'entry.972061131', p4_ftw_b_ai: 'entry.968958957',
     p4_ftw_c_download: 'entry.707817124', p4_ftw_c_ai: 'entry.415836664',
-    played: 'entry.1262496214', far: 'entry.1677435559', where: 'entry.1924391642',
+    seen: 'entry.1326805459', played: 'entry.1262496214', far: 'entry.1677435559', where: 'entry.1924391642',
     else: 'entry.1884087134', name: 'entry.1343568917'
   };
   var DRY = new URLSearchParams(location.search).get('dry') === '1';
@@ -181,6 +181,37 @@
     input.addEventListener('keydown', function () { setTimeout(take, 0); });
     show();
     w.refresh = show;
+    return w;
+  }
+
+  // A 1 to 5 rating as a row of buttons, for ratings that repeat down a list,
+  // where a tap is faster than a drag.
+  function rate5(key, question, left, right) {
+    var w = el('fieldset', 'rate5');
+    w.innerHTML = '<legend>' + question + '</legend>';
+    var row = el('div', 'r5-row');
+    for (var n = 1; n <= 5; n++) {
+      (function (n) {
+        var b = el('button', 'r5', String(n));
+        b.type = 'button';
+        b.setAttribute('aria-label', question + ': ' + n + ' of 5');
+        b.addEventListener('click', function () {
+          answers[key] = n;
+          show();
+          b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop');
+        });
+        row.appendChild(b);
+      })(n);
+    }
+    w.appendChild(row);
+    w.insertAdjacentHTML('beforeend', '<div class="ends"><span>' + left + '</span><span>' + right + '</span></div>');
+    function show() {
+      Array.prototype.forEach.call(row.children, function (b, i) {
+        b.classList.toggle('on', answers[key] === i + 1);
+        b.setAttribute('aria-pressed', answers[key] === i + 1 ? 'true' : 'false');
+      });
+    }
+    show();
     return w;
   }
 
@@ -362,8 +393,8 @@
           th.setAttribute('aria-label', 'Watch ' + it.name + ' again');
           th.addEventListener('click', function () { openSheet(it.clip, it.sound); });
           var bx = el('div', 'r-body', '<p class="r-name">' + esc(it.name) + '</p>');
-          bx.appendChild(slider('p4_' + it.id + '_download', 'Makes me want to download it', 'Not at all', 'Definitely'));
-          bx.appendChild(slider('p4_' + it.id + '_ai', 'Feels AI-made', 'Not at all', 'Completely'));
+          bx.appendChild(rate5('p4_' + it.id + '_download', 'Makes me want to download it', 'Not at all', 'Definitely'));
+          bx.appendChild(rate5('p4_' + it.id + '_ai', 'Feels AI-made', 'Not at all', 'Completely'));
           c.appendChild(th); c.appendChild(bx);
           list.appendChild(c);
         });
@@ -373,6 +404,7 @@
       var col = el('div', 'col');
       col.innerHTML = '<p class="kicker">Last bit</p><h2 class="card" tabindex="-1">About <em>you</em></h2>';
       var far;
+      col.appendChild(choice('seen', 'Have you seen Bounce Puzzle videos on social media?', ['Yes, a lot', 'A few times', 'No']));
       col.appendChild(choice('played', 'Have you played Bounce Puzzle?', ['Still playing', 'Tried it', 'Not yet'], function (i) {
         far.hidden = i === 2;
         if (i === 2) delete answers.far;
