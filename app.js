@@ -82,6 +82,10 @@
   SCREENS.push({ kind: 'pick', part: 'Stories', key: 'p3_narration', title: 'Which <em>speed</em> sounds best?',
     sound: true, needSound: true, options: [['narration-125', 'Slower'], ['narration-135', 'Middle'], ['narration-145', 'Faster']] });
   SCREENS.push({ kind: 'review', part: 'Looking back' });
+  SCREENS.push({ kind: 'q', part: 'Last bit', key: 'seen', title: 'Have you seen Bounce Puzzle videos on <em>social media?</em>', options: ['Yes, a lot', 'A few times', 'No'] });
+  SCREENS.push({ kind: 'q', part: 'Last bit', key: 'played', title: 'Have you played <em>Bounce Puzzle?</em>', options: ['Still playing', 'Tried it', 'Not yet'],
+    follow: { key: 'far', unless: 2, title: 'How far did you get?', options: ['World 1 to 2', 'World 3 to 5', 'World 6 to 8', 'Finished'] } });
+  SCREENS.push({ kind: 'q', part: 'Last bit', key: 'where', title: 'Where do you watch short videos <em>most?</em>', options: ['Instagram', 'TikTok', 'YouTube', 'Snapchat'] });
   SCREENS.push({ kind: 'about' });
   SCREENS.push({ kind: 'thanks' });
 
@@ -114,7 +118,9 @@
     var w = el('div', 'player');
     var v = el('video');
     v.src = 'clips/' + clip + '.mp4';
-    v.poster = 'clips/' + clip + '.jpg';
+    // The poster loads only once the clip's screen opens, so the first screen
+    // does not download every screen's image.
+    var poster = 'clips/' + clip + '.jpg';
     v.muted = true; v.loop = true; v.playsInline = true; v.preload = 'none';
     v.setAttribute('playsinline', '');
     var tap = el('button', 'p-tap'); tap.type = 'button'; tap.setAttribute('aria-label', 'Pause');
@@ -153,6 +159,7 @@
     v.addEventListener('play', function () { w.classList.remove('paused'); tap.setAttribute('aria-label', 'Pause'); });
     v.addEventListener('pause', function () { w.classList.add('paused'); tap.setAttribute('aria-label', 'Play'); });
     function play() {
+      if (v.getAttribute('poster') !== poster) v.poster = poster;
       v.preload = 'auto';
       var p = v.play();
       // A browser that blocks sound before a tap still plays the clip, muted.
@@ -160,7 +167,12 @@
     }
     w.play = play;
     w.stop = function () { v.pause(); };
-    w.load = function (clip2) { v.src = 'clips/' + clip2 + '.mp4'; v.poster = 'clips/' + clip2 + '.jpg'; scrub.value = 0; };
+    w.load = function (clip2) {
+      v.src = 'clips/' + clip2 + '.mp4';
+      poster = 'clips/' + clip2 + '.jpg';
+      if (v.hasAttribute('poster')) v.poster = poster;
+      scrub.value = 0;
+    };
     return w;
   }
 
@@ -222,12 +234,14 @@
   }
 
   // One answer from a row of options, with the game's squash-and-pop on tap.
-  function choice(key, question, options, onPick) {
+  // rows=true lays them out as full-width rows with no letters, for screens
+  // where the speech bubble already asks the question.
+  function choice(key, question, options, onPick, rows) {
     var w = el('fieldset', 'choice');
-    w.appendChild(el('legend', '', question));
-    var row = el('div', 'c-row c' + options.length);
+    w.appendChild(el('legend', rows ? 'sr-only' : '', question));
+    var row = el('div', 'c-row ' + (rows ? 'rows' : 'c' + options.length));
     options.forEach(function (o, i) {
-      var b = el('button', 'c-opt', '<b>' + LETTERS[i] + '</b><span>' + esc(o) + '</span>');
+      var b = el('button', 'c-opt', (rows ? '' : '<b>' + LETTERS[i] + '</b>') + '<span>' + esc(o) + '</span>');
       b.type = 'button';
       b.setAttribute('aria-pressed', 'false');
       b.addEventListener('click', function () {
@@ -282,10 +296,11 @@
         c.querySelector('.r-state').textContent = at >= 0 ? ', ranked ' + (at + 1) : ', not ranked yet';
       });
       var left = items.length - order.length;
-      hint.textContent = !order.length ? '' : left ? 'Next favourite. ' + left + ' to go' : 'All ranked';
+      hint.textContent = !order.length ? 'Tap your favourite first' : left ? 'Next favourite. ' + left + ' to go' : 'All ranked';
       clear.hidden = !order.length;
     }
-    w.appendChild(foot);
+    // Above the grid, so the count stays in view and never sits under the Next button.
+    w.insertBefore(foot, w.firstChild);
     save();
     return w;
   }
@@ -297,6 +312,15 @@
     b.setAttribute('data-next', '');
     d.appendChild(b);
     return d;
+  }
+  // The screen's Next reads "Skip" and sits quiet until something on it is
+  // answered, then lights up as "Next".
+  function refreshDock(sec) {
+    var b = sec && sec.querySelector('.dock [data-next]');
+    if (!b) return;
+    var has = !!sec.querySelector('.c-opt.on, .r5.on, .r-item.ranked, .slider.set');
+    b.textContent = has ? 'Next' : 'Skip';
+    b.classList.toggle('quiet', !has);
   }
   // Screen header: the part name, then the question in a speech bubble from the game icon.
   function head(s, title, desc) {
@@ -347,7 +371,7 @@
       var col = el('div', 'col wide');
       col.innerHTML = head(s, 'Rank the <em>openings</em>', 'Tap them from best to worst.');
       col.appendChild(ranker('p1_rank', HOOKS, function (h) {
-        return '<img src="clips/' + h.clip + '.jpg" alt=""><span>' + esc(h.name) + '</span>';
+        return '<img src="clips/' + h.clip + '.jpg" alt="" loading="lazy"><span>' + esc(h.name) + '</span>';
       }, 'thumbs'));
       col.appendChild(dock());
       sec.appendChild(col);
@@ -418,6 +442,7 @@
           r.addEventListener('click', function (e) { if (e.target.closest('.r5')) check(); });
           rates.appendChild(r);
         });
+        refreshDock(sec);
         p.load(it.clip);
         p.querySelector('.p-sound').hidden = !it.sound;
         p.sync();
@@ -435,21 +460,34 @@
       sec.back = function () { if (at > 0) { at--; render(); progress(); return true; } clearTimeout(timer); return false; };
       sec.fraction = function () { return items.length ? at / items.length : 0; };
     },
+    // One quick question as full-width rows. A tap moves on by itself, unless
+    // the answer opens a follow-up question, which then moves on when answered.
+    q: function (s, sec) {
+      var col = el('div', 'col');
+      col.innerHTML = head(s, s.title);
+      var timer = null;
+      function go() { clearTimeout(timer); timer = setTimeout(function () { if (screens[current] === sec) next(); }, 420); }
+      var follow = null;
+      col.appendChild(choice(s.key, s.title.replace(/<[^>]+>/g, ''), s.options, function (i) {
+        if (!s.follow) return go();
+        var open = i !== s.follow.unless;
+        follow.hidden = !open;
+        if (!open) { delete answers[s.follow.key]; go(); }
+        else clearTimeout(timer);
+      }, true));
+      if (s.follow) {
+        follow = choice(s.follow.key, s.follow.title, s.follow.options, go, false);
+        follow.hidden = true;
+        col.appendChild(follow);
+      }
+      col.appendChild(dock());
+      sec.appendChild(col);
+    },
     about: function (s, sec) {
       var col = el('div', 'col');
-      col.innerHTML = head({ part: 'Last bit' }, 'About <em>you</em>');
-      var far;
-      col.appendChild(choice('seen', 'Have you seen Bounce Puzzle videos on social media?', ['Yes, a lot', 'A few times', 'No']));
-      col.appendChild(choice('played', 'Have you played Bounce Puzzle?', ['Still playing', 'Tried it', 'Not yet'], function (i) {
-        far.hidden = i === 2;
-        if (i === 2) delete answers.far;
-      }));
-      far = choice('far', 'How far did you get?', ['World 1 to 2', 'World 3 to 5', 'World 6 to 8', 'Finished']);
-      far.hidden = true;
-      col.appendChild(far);
-      col.appendChild(choice('where', 'Where do you watch short videos most?', ['Instagram', 'TikTok', 'YouTube', 'Snapchat']));
+      col.innerHTML = head({ part: 'Last bit' }, 'Anything <em>else?</em>');
       col.insertAdjacentHTML('beforeend',
-        '<label class="field" for="more">Anything else? <span class="opt">Optional</span></label>' +
+        '<label class="sr-only" for="more">Anything else?</label>' +
         '<textarea class="text" id="more" rows="4" maxlength="3000" placeholder="What you liked, what you didn’t, what you’d change"></textarea>' +
         '<label class="field" for="who">Your name <span class="opt">Optional, only if you’re fine with Cheng following up</span></label>' +
         '<input class="text" id="who" type="text" maxlength="100" autocomplete="name" placeholder="First name, or leave it blank">' +
@@ -469,21 +507,20 @@
       sec.onShow = function () {
         var t = taste();
         var stats = [];
-        if (t.hook) stats.push(['Kept watching most', esc(t.hook.name) + ' <small>' + answers['p1_' + t.hook.id] + '%</small>']);
         var picks = TYPES.map(function (ty) { var a = answers['p2_' + ty.id + '_watch']; return a ? esc(a.slice(3)) : null; }).filter(Boolean);
         if (picks.length) stats.push(['Edits you’d watch', picks.join(', ')]);
-        var plots = answers.p3_plots;
-        if (plots) stats.push(['Story you’d hear first', esc(firstWords(plots.split(' | ')[0].slice(3), 9))]);
         var agree = agreement();
         if (agree) stats.push(['Agreed with Cheng', agree[0] + ' of ' + agree[1]]);
+        var hero = t.hook ? '<div class="res-hero"><b>' + answers['p1_' + t.hook.id] + '%</b><span>would keep watching<br><strong>' + esc(t.hook.name) + '</strong></span></div>' : '';
         col.innerHTML =
           '<div class="result" style="--accent:' + t.color + '">' +
             '<div class="res-art" aria-hidden="true">' + ART + '</div>' +
             '<p class="res-kicker">Your video taste</p>' +
             '<h2 class="res-name" tabindex="-1">' + t.name + '</h2>' +
             '<p class="res-line">' + t.line + '</p>' +
+            hero +
             (stats.length ? '<dl class="res-stats">' + stats.map(function (x) { return '<div><dt>' + x[0] + '</dt><dd>' + x[1] + '</dd></div>'; }).join('') + '</dl>' : '') +
-            '<p class="res-foot"><img src="assets/icon.png" width="28" height="28" alt="">Bounce Puzzle</p>' +
+            '<p class="res-foot"><img src="assets/icon.png" width="28" height="28" alt=""><span>Bounce Puzzle</span><small>' + esc((location.host + location.pathname).replace(/\/$/, '')) + '</small></p>' +
           '</div>' +
           '<p class="res-ask">Thanks for helping. Send it to a friend and see what taste they get.</p>' +
           '<div class="actions center"><button type="button" class="btn primary big" id="share">Send to a friend</button></div>' +
@@ -500,7 +537,7 @@
 
   // Small game scene for the top of the card: a dotted arc from the ball to the goal.
   var ART = '<svg viewBox="0 0 320 120"><path d="M40 30 Q150 -10 200 60 T290 92" fill="none" stroke="currentColor" stroke-width="5" stroke-dasharray="2 14" stroke-linecap="round"/>' +
-    '<circle cx="40" cy="30" r="15" fill="#ff6b6b"/><rect x="150" y="70" width="70" height="12" rx="6" transform="rotate(24 185 76)" fill="#4ecdc4"/>' +
+    '<circle cx="40" cy="30" r="15" fill="#ff6b6b" stroke="#14121f" stroke-width="4"/><rect x="150" y="70" width="70" height="12" rx="6" transform="rotate(24 185 76)" fill="#4ecdc4"/>' +
     '<rect x="268" y="80" width="40" height="28" rx="8" fill="#95e77e"/></svg>';
   // One type per opening, picked by whichever they would keep watching longest.
   var TASTES = {
@@ -518,7 +555,6 @@
     var t = TASTES[best.id];
     return { name: t.name, color: t.color, line: t.line, hook: best };
   }
-  function firstWords(s, n) { var w = s.split(' '); return w.length > n ? w.slice(0, n).join(' ') + '…' : s; }
   // [matches, compared] over the pick questions both they and Cheng answered.
   function agreement() {
     if (!CHENG) return null;
@@ -552,7 +588,7 @@
 
   var screens = [document.querySelector('[data-screen="welcome"]')];
   SCREENS.forEach(function (s) {
-    var video = s.kind === 'hook' || s.kind === 'compare' || s.kind === 'pick';
+    var video = s.kind === 'hook' || s.kind === 'compare' || s.kind === 'pick' || s.kind === 'review';
     var sec = el('section', 'screen ' + (video ? 'vscreen' : 'tscreen'));
     sec.setAttribute('data-screen', s.kind);
     sec.hidden = true;
@@ -576,6 +612,7 @@
     if (s.onShow) s.onShow(dir);
     else (s.players || []).forEach(function (p) { p.sync(); p.play(); });
     progress();
+    refreshDock(s);
     backBtn.hidden = i === 0 || i === last;
     bar.parentNode.hidden = i === 0;
     window.scrollTo(0, 0);
@@ -606,7 +643,11 @@
     if (current > 0 && current < screens.length - 1) show(current - 1, -1);
   }
 
-  document.addEventListener('click', function (e) { if (e.target.closest('[data-next]')) next(); });
+  document.addEventListener('click', function (e) {
+    if (e.target.closest('[data-next]')) next();
+    else setTimeout(function () { refreshDock(screens[current]); }, 0);
+  });
+  document.addEventListener('input', function () { refreshDock(screens[current]); });
   backBtn.addEventListener('click', back);
   document.addEventListener('keydown', function (e) {
     if (e.key !== 'Enter' || e.altKey) return;
@@ -680,6 +721,8 @@
     show(screens.length - 1, 1);
   }
 
+  var scene = document.getElementById('scene');
+  if (reduce.matches && scene.pauseAnimations) scene.pauseAnimations();
   if (DRY) window.__feedback = { answers: answers, show: show, screens: screens };
   show(0, 0);
 })();

@@ -24,7 +24,15 @@
 <main>
   <form id="form" novalidate>
     <section class="screen welcome" data-screen="welcome" aria-labelledby="t-welcome">
-      <img class="icon" src="assets/icon.png" width="112" height="112" alt="Bounce Puzzle app icon">
+      <!-- The ball drops onto the ramp and bounces into the goal, on a loop -->
+      <svg class="scene" id="scene" viewBox="0 0 280 170" aria-hidden="true">
+        <path d="M44 10 L44 66 Q118 4 214 128" fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="3" stroke-dasharray="1 9" stroke-linecap="round"/>
+        <rect x="20" y="78" width="60" height="11" rx="5.5" fill="#4ecdc4" transform="rotate(-16 50 83)"/>
+        <rect x="190" y="132" width="48" height="30" rx="8" fill="#95e77e"/>
+        <circle r="11" fill="#ff6b6b">
+          <animateMotion dur="2.4s" repeatCount="indefinite" path="M44 10 L44 66 Q118 4 214 128 L214 136" keyPoints="0;0.22;0.92;1;1" keyTimes="0;0.25;0.7;0.78;1" calcMode="spline" keySplines="0.5 0 1 1;0 0.4 0.6 1;0.5 0 1 1;0 0 1 1"/>
+        </circle>
+      </svg>
       <h1 id="t-welcome" tabindex="-1" class="wordmark" aria-label="Bounce Puzzle">
         <img src="assets/bounce.png" alt="" width="716" height="123"><img src="assets/puzzle.png" alt="" width="642" height="120">
       </h1>
