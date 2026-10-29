@@ -296,7 +296,7 @@
         c.querySelector('.r-state').textContent = at >= 0 ? ', ranked ' + (at + 1) : ', not ranked yet';
       });
       var left = items.length - order.length;
-      hint.textContent = !order.length ? 'Tap your favourite first' : left ? 'Next favourite. ' + left + ' to go' : 'All ranked';
+      hint.textContent = !order.length ? '' : left ?'Next favourite. ' + left + ' to go' : 'All ranked';
       clear.hidden = !order.length;
     }
     // Above the grid, so the count stays in view and never sits under the Next button.
@@ -506,20 +506,23 @@
       sec.appendChild(col);
       sec.onShow = function () {
         var t = taste();
-        var stats = [];
-        var picks = TYPES.map(function (ty) { var a = answers['p2_' + ty.id + '_watch']; return a ? esc(a.slice(3)) : null; }).filter(Boolean);
-        if (picks.length) stats.push(['Edits you’d watch', picks.join(', ')]);
+        // Two big facts, Wrapped-style: how long they'd watch their top opening,
+        // then agreement with Cheng once his picks are in, else their first edit pick.
+        var facts = [];
+        if (t.hook) facts.push(['Kept watching', answers['p1_' + t.hook.id] + '%', esc(t.hook.name)]);
         var agree = agreement();
-        if (agree) stats.push(['Agreed with Cheng', agree[0] + ' of ' + agree[1]]);
-        var hero = t.hook ? '<div class="res-hero"><b>' + answers['p1_' + t.hook.id] + '%</b><span>would keep watching<br><strong>' + esc(t.hook.name) + '</strong></span></div>' : '';
+        var firstPick = TYPES.map(function (ty) { var a = answers['p2_' + ty.id + '_watch']; return a ? a.slice(3) : null; }).filter(Boolean)[0];
+        if (agree) facts.push(['Agreed with Cheng', agree[0] + '/' + agree[1], 'picks']);
+        else if (firstPick) facts.push(['Favourite edit', esc(firstPick), '']);
+        // The frame shows a still of their top opening, or the game scene when they rated none.
+        var pic = t.hook ? '<img src="clips/' + t.hook.clip + '.jpg" alt="">' : ART;
         col.innerHTML =
           '<div class="result" style="--accent:' + t.color + '">' +
-            '<div class="res-art" aria-hidden="true">' + ART + '</div>' +
+            '<div class="res-top" aria-hidden="true"><span class="res-side">TASTE</span><div class="res-frame">' + pic + '</div></div>' +
             '<p class="res-kicker">Your video taste</p>' +
             '<h2 class="res-name" tabindex="-1">' + t.name + '</h2>' +
             '<p class="res-line">' + t.line + '</p>' +
-            hero +
-            (stats.length ? '<dl class="res-stats">' + stats.map(function (x) { return '<div><dt>' + x[0] + '</dt><dd>' + x[1] + '</dd></div>'; }).join('') + '</dl>' : '') +
+            (facts.length ? '<dl class="res-facts">' + facts.map(function (f) { return '<div><dt>' + f[0] + '</dt><dd>' + f[1] + '</dd>' + (f[2] ? '<span>' + f[2] + '</span>' : '') + '</div>'; }).join('') + '</dl>' : '') +
             '<p class="res-foot"><img src="assets/icon.png" width="28" height="28" alt=""><span>Bounce Puzzle</span><small>' + esc((location.host + location.pathname).replace(/\/$/, '')) + '</small></p>' +
           '</div>' +
           '<p class="res-ask">Thanks for helping. Send it to a friend and see what taste they get.</p>' +
@@ -614,7 +617,8 @@
     progress();
     refreshDock(s);
     backBtn.hidden = i === 0 || i === last;
-    bar.parentNode.hidden = i === 0;
+    // No chrome on the welcome screen or around the card, so it screenshots clean.
+    bar.parentNode.hidden = i === 0 || i === last;
     window.scrollTo(0, 0);
     var h = s.querySelector('[tabindex="-1"]');
     if (h) h.focus({ preventScroll: true });
