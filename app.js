@@ -82,7 +82,7 @@
   SCREENS.push({ kind: 'pick', part: 'Stories', key: 'p3_narration', title: 'Which <em>speed</em> sounds best?',
     sound: true, needSound: true, options: [['narration-125', 'Slower'], ['narration-135', 'Middle'], ['narration-145', 'Faster']] });
   SCREENS.push({ kind: 'review', part: 'Looking back' });
-  SCREENS.push({ kind: 'q', part: 'Last bit', key: 'seen', title: 'Have you seen Bounce Puzzle videos on <em>social media?</em>', options: ['Yes, a lot', 'A few times', 'No'] });
+  SCREENS.push({ kind: 'q', part: 'Last bit', key: 'seen', title: 'Seen our videos on <em>social media?</em>', options: ['Yes, a lot', 'A few times', 'No'] });
   SCREENS.push({ kind: 'q', part: 'Last bit', key: 'played', title: 'Have you played <em>Bounce Puzzle?</em>', options: ['Still playing', 'Tried it', 'Not yet'],
     follow: { key: 'far', unless: 2, title: 'How far did you get?', options: ['World 1 to 2', 'World 3 to 5', 'World 6 to 8', 'Finished'] } });
   SCREENS.push({ kind: 'q', part: 'Last bit', key: 'where', title: 'Where do you watch short videos <em>most?</em>', options: ['Instagram', 'TikTok', 'YouTube', 'Snapchat'] });
@@ -489,7 +489,7 @@
       col.insertAdjacentHTML('beforeend',
         '<label class="sr-only" for="more">Anything else?</label>' +
         '<textarea class="text" id="more" rows="4" maxlength="3000" placeholder="What you liked, what you didn’t, what you’d change"></textarea>' +
-        '<label class="field" for="who">Your name <span class="opt">Optional, only if you’re fine with Cheng following up</span></label>' +
+        '<label class="field" for="who">Your name <span class="opt">Only if Cheng can follow up</span></label>' +
         '<input class="text" id="who" type="text" maxlength="100" autocomplete="name" placeholder="First name, or leave it blank">' +
         '<p class="msg" id="msg" role="alert" hidden></p>');
       var d = el('div', 'actions dock');
