@@ -226,6 +226,10 @@ h1, h2, p { margin: 0; }
 /* The progress bar already shows where they are on the video screens */
 [data-screen="hook"] .kicker, [data-screen="compare"] .kicker, [data-screen="pick"] .kicker { display: none; }
 [data-screen="review"] .player { height: clamp(200px, 32dvh, 340px); }
+@media (max-width: 899px) {
+  /* Smaller clip on the compare and pick screens, so every answer fits above the button */
+  [data-screen="compare"] .player, [data-screen="pick"] .player { height: clamp(190px, 32dvh, 330px); }
+}
 
 /* choices: one answer from a row, with the ball's squash and pop */
 .choice { border: 0; padding: 0; margin: 18px 0 0; min-width: 0; }

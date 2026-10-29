@@ -54,15 +54,16 @@
     { id: 'wl', dir: 'which-layout', title: 'Which one <em>wins?</em>', edits: ['Knockout grid', 'Study and sweep', 'Head to head'] },
     { id: 'ftw', dir: 'fails-then-win', title: 'How many <em>tries?</em>', edits: ['Death counter', 'The wall', 'Rewind'] }
   ];
+  // name: the one-line hook shown and saved; text: the full plot it stands for.
   var PLOTS = [
-    'I spent two months working up the nerve to tell my crush I liked her. When I finally did, she laughed and turned her phone around. She’d had the same message to me sitting in her drafts since September.',
-    'My neighbour’s kid kept using our pool without asking. When we locked the gate, her mom called the police on us. The officer who showed up was my uncle, and he had questions for her instead.',
-    'My boss banned “unnecessary emails” and said every question had to go through him in person. So for a week, I walked to his office for every single one. All 140 of them.',
-    'My roommate kept eating my labelled leftovers and swore it wasn’t him. So I labelled a fresh container “chili”. It was my homemade ghost pepper sauce.',
-    'My sister banned my boyfriend from her wedding because he’d “ruin the photos”. So neither of us went. A week before, her photographer cancelled, and she had to call the only one free that day: my boyfriend.',
-    'My boyfriend said he was at his grandma’s all weekend. Then his shared location showed him at a concert two hours away, with my best friend.',
-    'My parents always told me I was an only child. Then a DNA test said I had a sister, and she lives two streets away.',
-    'For three months, someone left a hot coffee on our porch every Monday at 6am. When we finally set up a camera, it was the old man who used to own our house.'
+    { name: 'My crush laughed at my confession, then showed me her drafts', text: 'I spent two months working up the nerve to tell my crush I liked her. When I finally did, she laughed and turned her phone around. She’d had the same message to me sitting in her drafts since September.' },
+    { name: 'A mom called the cops on us. The cop was my uncle', text: 'My neighbour’s kid kept using our pool without asking. When we locked the gate, her mom called the police on us. The officer who showed up was my uncle, and he had questions for her instead.' },
+    { name: 'My boss banned emails, so I asked him 140 questions in person', text: 'My boss banned “unnecessary emails” and said every question had to go through him in person. So for a week, I walked to his office for every single one. All 140 of them.' },
+    { name: 'My roommate kept stealing my food, so I labelled my ghost pepper sauce “chili”', text: 'My roommate kept eating my labelled leftovers and swore it wasn’t him. So I labelled a fresh container “chili”. It was my homemade ghost pepper sauce.' },
+    { name: 'My sister banned my boyfriend from her wedding, then needed him as the photographer', text: 'My sister banned my boyfriend from her wedding because he’d “ruin the photos”. So neither of us went. A week before, her photographer cancelled, and she had to call the only one free that day: my boyfriend.' },
+    { name: 'My boyfriend’s location put him at a concert with my best friend', text: 'My boyfriend said he was at his grandma’s all weekend. Then his shared location showed him at a concert two hours away, with my best friend.' },
+    { name: 'A DNA test found the sister I never knew, two streets away', text: 'My parents always told me I was an only child. Then a DNA test said I had a sister, and she lives two streets away.' },
+    { name: 'Someone left us coffee every Monday. The camera caught the old owner', text: 'For three months, someone left a hot coffee on our porch every Monday at 6am. When we finally set up a camera, it was the old man who used to own our house.' }
   ];
   var LETTERS = 'ABCD';
 
@@ -383,8 +384,15 @@
       lay.appendChild(tb.box);
       var body = el('div', 'vbody');
       body.innerHTML = head(s, t.title, t.edits.length + ' ways to edit the same video. Watch each, then pick.');
-      body.appendChild(choice('p2_' + t.id + '_watch', 'Which would you rather watch?', t.edits));
-      body.appendChild(choice('p2_' + t.id + '_download', 'Which makes you most likely to download the game?', t.edits));
+      // One question at a time: the second appears once the first is answered.
+      var second = choice('p2_' + t.id + '_download', 'Which makes you most likely to download the game?', t.edits);
+      second.hidden = !answers['p2_' + t.id + '_watch'];
+      body.appendChild(choice('p2_' + t.id + '_watch', 'Which would you rather watch?', t.edits, function () {
+        if (!second.hidden) return;
+        second.hidden = false;
+        setTimeout(function () { second.scrollIntoView({ behavior: reduce.matches ? 'auto' : 'smooth', block: 'center' }); }, 120);
+      }));
+      body.appendChild(second);
       body.appendChild(dock());
       lay.appendChild(body);
       sec.appendChild(lay);
@@ -393,7 +401,7 @@
     'rank-plots': function (s, sec) {
       var col = el('div', 'col wide');
       col.innerHTML = head(s, 'Which stories would you <em>watch?</em>', 'Tap them from the one you’d most want to hear to the least.');
-      col.appendChild(ranker('p3_plots', PLOTS, function (p) { return '<span>' + esc(p) + '</span>'; }, 'texts'));
+      col.appendChild(ranker('p3_plots', PLOTS, function (p) { return '<span>' + esc(p.name) + '</span>'; }, 'texts'));
       col.appendChild(dock());
       sec.appendChild(col);
     },
