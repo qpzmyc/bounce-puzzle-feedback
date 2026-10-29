@@ -468,7 +468,8 @@
     screens.forEach(function (s, n) { s.hidden = n !== i; s.classList.remove('enter-fwd', 'enter-back'); });
     var s = screens[i];
     current = i;
-    if (!reduce.matches) { void s.offsetWidth; s.classList.add(dir < 0 ? 'enter-back' : 'enter-fwd'); }
+    // The first screen shows at once: a fade-in from nothing delays its first paint.
+    if (!reduce.matches && dir) { void s.offsetWidth; s.classList.add(dir < 0 ? 'enter-back' : 'enter-fwd'); }
     if (s.onShow) s.onShow();
     // Only this screen's clip plays.
     document.querySelectorAll('.player').forEach(function (p) { if (!s.contains(p) && p.stop) p.stop(); });
@@ -561,5 +562,5 @@
   }
 
   if (DRY) window.__feedback = { answers: answers, show: show, screens: screens };
-  show(0, 1);
+  show(0, 0);
 })();
