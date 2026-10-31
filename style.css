@@ -232,12 +232,42 @@ h1, h2, p { margin: 0; }
   /* The openings carry a slider and the AI-made row */
   [data-screen="hook"] .p-frame { height: clamp(180px, 34dvh, 340px); }
   /* Watching: the clip large and the questions hidden until Answer */
-  /* Fills the space down to the dock: 216px is the progress bar, controls and dock, plus the tabs where there are some */
-  .vscreen.watching .p-frame { height: min(calc(100dvh - 216px), calc((100vw - 40px) * 16 / 9)); }
-  .vscreen.watching:has(.tabs) .p-frame { height: min(calc(100dvh - 264px), calc((100vw - 40px) * 16 / 9)); }
-  .vscreen.watching .vbody > :not(.dock) { display: none; }
+  /* Fills the space down to the question card: 280px is the progress bar, controls, card and dock, plus the tabs where there are some */
+  .vscreen.watching .p-frame { height: min(calc(100dvh - 280px), calc((100vw - 40px) * 16 / 9)); }
+  .vscreen.watching:has(.tabs) .p-frame { height: min(calc(100dvh - 328px), calc((100vw - 40px) * 16 / 9)); }
+  .vscreen.watching .vbody > :not(.dock):not(.peek) { display: none; }
+  /* The question card, pinned just above the dock while watching */
+  .vscreen.watching .peek {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    position: fixed; z-index: 5; left: 16px; right: 16px; bottom: calc(86px + env(safe-area-inset-bottom));
+    padding: 8px 16px 12px; border: 2px solid var(--line); border-bottom: 0; border-radius: 16px 16px 0 0;
+    background: var(--surface); cursor: pointer;
+    font: 800 1.05rem/1.2 var(--display); letter-spacing: -0.02em; text-align: center;
+  }
+  .peek em { font-style: normal; color: var(--indigo-light); }
+  .peek .grab { width: 36px; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, 0.3); }
+  /* The answers slide up from where the card was. The dock is left out: a transform would unpin it */
+  .vscreen.opened .vbody > :not(.dock) { animation: sheet-up 360ms var(--ease) backwards; }
+  /* Answer fills with coral as the clip plays (--seen), then turns solid once it has played through */
+  .vscreen.watching .dock [data-next] {
+    position: relative; isolation: isolate; overflow: hidden;
+    background: rgba(255, 107, 107, 0.16); color: var(--ink); text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    box-shadow: inset 0 0 0 2px rgba(255, 107, 107, 0.55);
+  }
+  .vscreen.watching .dock [data-next]::before {
+    content: ""; position: absolute; inset: 0 auto 0 0; z-index: -1; width: var(--seen, 0%);
+    background: var(--ball); transition: width 300ms linear;
+  }
+  .vscreen.watching.seen .dock [data-next] {
+    background: var(--ball); color: #1b0a14; text-shadow: none;
+    box-shadow: 0 6px 20px rgba(255, 107, 107, 0.3); animation: nudge 1.8s ease-in-out 2;
+  }
   .p-frame { transition: height 320ms var(--ease); }
 }
+
+/* the question card shows only while watching, on a phone */
+.peek { display: none; }
+@keyframes sheet-up { from { opacity: 0; transform: translateY(48px); } to { opacity: 1; transform: none; } }
 
 /* choices: one answer from a row, with the ball's squash and pop */
 .choice { border: 0; padding: 0; margin: 18px 0 0; min-width: 0; }

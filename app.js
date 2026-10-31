@@ -600,9 +600,26 @@
     sec.hidden = true;
     BUILD[s.kind](s, sec);
     if (video) {
+      // While watching, the question peeks above the dock as a card; tapping it opens the answers.
+      var dk = sec.querySelector('.vbody > .dock');
+      var peek = el('button', 'peek', '<i class="grab" aria-hidden="true"></i><span>' + sec.querySelector('.bubble .card').innerHTML + '</span>');
+      peek.type = 'button';
+      peek.setAttribute('data-next', '');
+      dk.parentNode.insertBefore(peek, dk);
+      // Answer fills with the clip's furthest point played, and lights up once one play is nearly done.
+      (function (sec, v, go) {
+        var seen = 0;
+        v.addEventListener('timeupdate', function () {
+          if (!v.duration || sec.classList.contains('seen')) return;
+          seen = Math.max(seen, v.currentTime / v.duration);
+          go.style.setProperty('--seen', Math.round(seen * 100) + '%');
+          if (seen > 0.9) sec.classList.add('seen');
+        });
+      })(sec, sec.querySelector('video'), dk.querySelector('[data-next]'));
       sec.next = function () {
         if (!watching(sec)) return false;
         sec.classList.remove('watching');
+        sec.classList.add('opened');
         refreshDock(sec);
         sec.querySelector('[tabindex="-1"]').focus({ preventScroll: true });
         return true;
@@ -610,6 +627,7 @@
       sec.back = function () {
         if (!phone.matches || sec.classList.contains('watching')) return false;
         sec.classList.add('watching');
+        sec.classList.remove('opened');
         refreshDock(sec);
         window.scrollTo(0, 0);
         return true;
