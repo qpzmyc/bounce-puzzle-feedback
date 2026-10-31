@@ -52,17 +52,16 @@
     { name: 'A DNA test found the sister I never knew, two streets away', text: 'My parents always told me I was an only child. Then a DNA test said I had a sister, and she lives two streets away.' },
     { name: 'Someone left us coffee every Monday. The camera caught the old owner', text: 'For three months, someone left a hot coffee on our porch every Monday at 6am. When we finally set up a camera, it was the old man who used to own our house.' }
   ];
-  // The full-plot ranking: a new story on the same idea as each first line
-  // above, so nobody ranks the same story twice. name is the label saved.
+  // The full-plot ranking: a new story on the same idea as each of the first
+  // six first lines above, so nobody ranks the same story twice. Six, not
+  // eight, to keep the reading short. name is the label saved.
   var SIBLINGS = [
-    { name: 'Prom sign', text: 'I asked my crush to prom with a sign in the cafeteria, and she said no in front of everyone. An hour later her best friend told me why. She’d been planning to ask me that afternoon, and I’d ruined her surprise.' },
-    { name: 'Parking officer mom', text: 'My neighbor reported my car for parking too close to her driveway. The parking officer who came out to check was my mom. She measured, and it was the neighbor’s car that was over the line.' },
-    { name: 'Show every step', text: 'My math teacher said we had to show every step of our working, no exceptions. So on the next test, for 2 + 3, I handed in a full page proving it equals 5.' },
-    { name: 'Toothpaste cookies', text: 'My little brother kept stealing cookies from my jar and swore it wasn’t him. So I baked a batch with toothpaste instead of frosting and left them on top. He hasn’t touched the jar since.' },
-    { name: 'Cousin’s DJ', text: 'My cousin didn’t invite me to her birthday party because I’m “too loud”. The day before, her DJ cancelled, and the only one free that weekend was me.' },
-    { name: 'Sick on my birthday', text: 'My best friend said she was too sick to come to my birthday. That night my sister showed me her story from a party across town, with my ex.' },
-    { name: 'Cousin in math class', text: 'I sat next to the same guy in math for three years. At my grandma’s 80th birthday, he walked in carrying the cake. He’s my cousin, and nobody ever told either of us.' },
-    { name: 'Snow shoveler', text: 'Every winter, someone shovels our driveway before we wake up. Last year we stayed up to catch them. It was the kid next door, paying back the summer my dad taught him to ride a bike.' }
+    { name: 'Prom sign', text: 'I asked my crush to prom in the cafeteria, and she said no in front of everyone. Later her best friend told me why. She’d been planning to ask me that afternoon.' },
+    { name: 'Parking officer mom', text: 'My neighbor reported my car for parking too close to her driveway. The parking officer who came to check was my mom. She measured, and the neighbor’s car was the one over the line.' },
+    { name: 'Show every step', text: 'My math teacher said we had to show every step, no exceptions. So on the next test, for 2 + 3, I handed in a full page proving it equals 5.' },
+    { name: 'Toothpaste cookies', text: 'My little brother kept stealing my cookies and swore it wasn’t him. So I baked a batch with toothpaste instead of frosting. He hasn’t touched the jar since.' },
+    { name: 'Cousin’s DJ', text: 'My cousin didn’t invite me to her birthday because I’m “too loud”. The day before, her DJ cancelled, and the only one free was me.' },
+    { name: 'Sick on my birthday', text: 'My best friend said she was too sick to come to my birthday. That night she posted from a party across town, with my ex.' }
   ];
   var LETTERS = 'ABCD';
 
@@ -204,7 +203,7 @@
 
   // A 0 to 100% slider in steps of 5. It starts unanswered, showing a dash,
   // and only counts once it has been moved or tapped.
-  function slider(key, question, left, right) {
+  function slider(key, question, left, right, onTake) {
     var w = el('div', 'slider');
     var id = 's-' + key;
     w.innerHTML = '<div class="s-top"><label class="sr-only" for="' + id + '">' + question + '</label><output class="s-val" for="' + id + '"></output></div>' +
@@ -219,7 +218,7 @@
       out.textContent = on ? answers[key] + '%' : 'Drag to answer';
       input.style.setProperty('--fill', (on ? answers[key] : 0) + '%');
     }
-    function take() { answers[key] = Number(input.value); show(); }
+    function take() { answers[key] = Number(input.value); show(); if (onTake) onTake(); }
     input.addEventListener('input', take);
     input.addEventListener('pointerdown', function () { setTimeout(take, 0); });
     input.addEventListener('keydown', function () { setTimeout(take, 0); });
@@ -290,98 +289,6 @@
     return w;
   }
 
-  // Each option is a ball dropped on one line from "Scroll past" to "Watch it
-  // all", so both the order and the gaps get saved. A tap on a ball and then
-  // on the line places it too, and arrow keys move a focused ball.
-  function placer(key, question, options, onDone) {
-    var w = el('fieldset', 'choice placer');
-    w.innerHTML = '<legend>' + question + '</legend><div class="pl-line"><p class="pl-tip"></p><div class="pl-track"></div>' +
-      '<span class="pl-end">Scroll past</span><span class="pl-end r">Watch it all</span></div>';
-    var line = w.querySelector('.pl-line');
-    var tip = w.querySelector('.pl-tip');
-    var clear = el('button', 'btn ghost pl-clear', 'Start over'); clear.type = 'button';
-    w.appendChild(clear);
-    var pos = {}, sel = null, dragged = false;
-    // Saved as "A: name 80 | C: name 55 | B: name 20", highest first.
-    (answers[key] || '').split(' | ').forEach(function (part) {
-      var m = /^([A-D]): .* (\d+)$/.exec(part);
-      if (m) pos[LETTERS.indexOf(m[1])] = Number(m[2]);
-    });
-    var balls = options.map(function (o, i) {
-      var b = el('button', 'pl-ball', LETTERS[i]);
-      b.type = 'button';
-      b.setAttribute('data-i', i);
-      line.appendChild(b);
-      b.addEventListener('pointerdown', function (e) {
-        b.setPointerCapture(e.pointerId);
-        b.classList.add('drag');
-        dragged = false;
-        b.startX = e.clientX;
-      });
-      b.addEventListener('pointermove', function (e) {
-        if (!b.classList.contains('drag')) return;
-        if (!dragged && Math.abs(e.clientX - b.startX) < 6) return;
-        dragged = true;
-        pos[i] = pct(e.clientX);
-        draw();
-      });
-      b.addEventListener('pointerup', function () { b.classList.remove('drag'); if (dragged) { sel = null; save(); } });
-      b.addEventListener('pointercancel', function () { b.classList.remove('drag'); });
-      b.addEventListener('click', function () { if (dragged) return; sel = sel === i ? null : i; draw(); });
-      b.addEventListener('keydown', function (e) {
-        var d = e.key === 'ArrowRight' || e.key === 'ArrowUp' ? 5 : e.key === 'ArrowLeft' || e.key === 'ArrowDown' ? -5 : 0;
-        if (!d) return;
-        e.preventDefault();
-        pos[i] = Math.max(0, Math.min(100, (pos[i] == null ? 50 : pos[i]) + d));
-        save();
-      });
-      return b;
-    });
-    line.addEventListener('click', function (e) {
-      if (sel == null || e.target.closest('.pl-ball')) return;
-      pos[sel] = pct(e.clientX);
-      sel = null;
-      save();
-    });
-    clear.addEventListener('click', function () { pos = {}; sel = null; save(); });
-    function pct(x) {
-      var r = line.getBoundingClientRect();
-      return Math.round(Math.max(0, Math.min(100, (x - r.left - 22) / (r.width - 44) * 100)));
-    }
-    function placed() {
-      return options.map(function (o, i) { return i; }).filter(function (i) { return pos[i] != null; })
-        .sort(function (a, b) { return pos[b] - pos[a]; });
-    }
-    function draw() {
-      balls.forEach(function (b, i) {
-        if (pos[i] == null) {
-          b.style.left = 'calc(50% + ' + (i - (options.length - 1) / 2) * 58 + 'px)';
-          b.style.top = '76px';
-        } else {
-          // Balls close together stack upward, so none hides another.
-          var lift = 0;
-          for (var j = 0; j < i; j++) if (pos[j] != null && Math.abs(pos[j] - pos[i]) < 9) lift += 32;
-          b.style.left = 'calc(22px + (100% - 44px) * ' + pos[i] / 100 + ')';
-          b.style.top = (23 - lift) + 'px';
-        }
-        b.classList.toggle('sel', sel === i);
-        b.setAttribute('aria-label', LETTERS[i] + ', ' + options[i] + (pos[i] == null ? ', not placed. Arrow keys place it' : ', at ' + pos[i] + ' out of 100'));
-      });
-      var n = placed().length;
-      tip.textContent = sel != null ? 'Now tap a spot on the line' : !n ? 'Drag each ball onto the line' : n < options.length ? (options.length - n) + ' to go' : 'All placed';
-      clear.hidden = !n;
-      w.classList.toggle('set', n > 0);
-    }
-    function save() {
-      var p = placed();
-      answers[key] = p.length ? p.map(function (i) { return LETTERS[i] + ': ' + options[i] + ' ' + pos[i]; }).join(' | ') : null;
-      draw();
-      if (p.length === options.length && onDone) onDone();
-    }
-    draw();
-    return w;
-  }
-
   // Tap the items from best to worst. Tapping a ranked item takes it, and
   // every one after it, back out.
   function ranker(key, items, render, cls) {
@@ -439,14 +346,19 @@
     d.appendChild(b);
     return d;
   }
+  function answered(sec) { return !!sec.querySelector('.c-opt.on, .r5.on, .r-item.ranked, .slider.set'); }
+  // On a phone, a video screen opens with the clip large and the questions
+  // hidden. Answer (the dock's Next) shrinks the clip and shows them.
+  var phone = window.matchMedia('(max-width: 899px)');
+  function watching(sec) { return phone.matches && sec.classList.contains('watching'); }
   // The screen's Next reads "Skip" and sits quiet until something on it is
   // answered, then lights up as "Next".
   function refreshDock(sec) {
     var b = sec && sec.querySelector('.dock [data-next]');
     if (!b) return;
-    var has = !!sec.querySelector('.c-opt.on, .r5.on, .r-item.ranked, .slider.set, .placer.set');
-    b.textContent = has ? 'Next' : 'Skip';
-    b.classList.toggle('quiet', !has);
+    var has = answered(sec);
+    b.textContent = watching(sec) ? 'Answer' : has ? 'Next' : 'Skip';
+    b.classList.toggle('quiet', !has && !watching(sec));
   }
   // Screen header: the part name, then the question in a speech bubble from the game icon.
   function head(s, title, desc) {
@@ -457,7 +369,7 @@
       (desc ? '<p class="desc">' + desc + '</p>' : '') + '</div></div>';
   }
   // Tabs over one player, for screens that compare versions of a clip.
-  function tabbed(options, sound) {
+  function tabbed(options, sound, onSelect) {
     var box = el('div', 'vside');
     var tabs = el('div', 'tabs');
     var p = player(options[0][0], { sound: sound });
@@ -470,6 +382,7 @@
       Array.prototype.forEach.call(tabs.children, function (b, n) { b.classList.toggle('on', n === i); b.setAttribute('aria-pressed', n === i ? 'true' : 'false'); });
       p.load(options[i][0]);
       if (go) p.play();
+      if (onSelect) onSelect(i);
     }
     box.appendChild(tabs); box.appendChild(p);
     select(0, false);
@@ -506,19 +419,37 @@
     },
     compare: function (s, sec) {
       var t = s.type;
+      var key = 'p2_' + t.id + '_watch';
       var lay = el('div', 'vlayout');
-      var tb = tabbed(t.edits.map(function (n, i) { return ['edit-' + t.dir + '-' + 'abc'[i], n]; }), true);
+      // One slider per edit, shown with the tab that is playing.
+      var rate = el('fieldset', 'choice');
+      var legend = el('legend');
+      rate.appendChild(legend);
+      var sliders = t.edits.map(function (n, i) {
+        var w = slider(key + i, 'How long would you watch ' + LETTERS[i] + ', ' + n + '?', 'Scroll past', 'Watch it all', combine);
+        rate.appendChild(w);
+        return w;
+      });
+      var tb = tabbed(t.edits.map(function (n, i) { return ['edit-' + t.dir + '-' + 'abc'[i], n]; }), true, function (i) {
+        legend.innerHTML = 'How long would you watch <b>' + LETTERS[i] + '</b>?';
+        sliders.forEach(function (w, n) { w.hidden = n !== i; });
+      });
       lay.appendChild(tb.box);
       var body = el('div', 'vbody');
       body.innerHTML = head(s, t.title, t.edits.length + ' ways to edit the same video. Watch each, then pick.');
-      // One question at a time: the second appears once all three are placed.
+      body.appendChild(rate);
+      // One question at a time: the second appears once all three are rated.
       var second = choice('p2_' + t.id + '_download', 'Which makes you most likely to download the game?', t.edits);
-      second.hidden = !/(\|.*){2}/.test(answers['p2_' + t.id + '_watch'] || '');
-      body.appendChild(placer('p2_' + t.id + '_watch', 'How long would you watch each one?', t.edits, function () {
-        if (!second.hidden) return;
+      second.hidden = !/(\|.*){2}/.test(answers[key] || '');
+      // Saved together as "A: name 80 | C: name 55 | B: name 20", highest first.
+      function combine() {
+        var r = t.edits.map(function (n, i) { return i; }).filter(function (i) { return answers[key + i] != null; })
+          .sort(function (a, b) { return answers[key + b] - answers[key + a]; });
+        answers[key] = r.length ? r.map(function (i) { return LETTERS[i] + ': ' + t.edits[i] + ' ' + answers[key + i]; }).join(' | ') : null;
+        if (r.length < t.edits.length || !second.hidden) return;
         second.hidden = false;
         setTimeout(function () { second.scrollIntoView({ behavior: reduce.matches ? 'auto' : 'smooth', block: 'center' }); }, 120);
-      }));
+      }
       body.appendChild(second);
       body.appendChild(dock());
       lay.appendChild(body);
@@ -668,6 +599,22 @@
     sec.setAttribute('data-screen', s.kind);
     sec.hidden = true;
     BUILD[s.kind](s, sec);
+    if (video) {
+      sec.next = function () {
+        if (!watching(sec)) return false;
+        sec.classList.remove('watching');
+        refreshDock(sec);
+        sec.querySelector('[tabindex="-1"]').focus({ preventScroll: true });
+        return true;
+      };
+      sec.back = function () {
+        if (!phone.matches || sec.classList.contains('watching')) return false;
+        sec.classList.add('watching');
+        refreshDock(sec);
+        window.scrollTo(0, 0);
+        return true;
+      };
+    }
     holder.appendChild(sec);
     screens.push(sec);
   });
@@ -680,6 +627,8 @@
     screens.forEach(function (s, n) { s.hidden = n !== i; s.classList.remove('enter-fwd', 'enter-back'); });
     var s = screens[i];
     current = i;
+    // A video screen with nothing answered opens on the large clip.
+    if (s.classList.contains('vscreen')) s.classList.toggle('watching', !answered(s));
     // The first screen shows at once: a fade-in from nothing delays its first paint.
     if (!reduce.matches && dir) { void s.offsetWidth; s.classList.add(dir < 0 ? 'enter-back' : 'enter-fwd'); }
     // Only this screen's clip plays.
