@@ -203,7 +203,7 @@
 
   // A 0 to 100% slider in steps of 5. It starts unanswered, showing a dash,
   // and only counts once it has been moved or tapped.
-  function slider(key, question, left, right, onTake) {
+  function slider(key, question, left, right, onTake, blank) {
     var w = el('div', 'slider');
     var id = 's-' + key;
     w.innerHTML = '<div class="s-top"><label class="sr-only" for="' + id + '">' + question + '</label><output class="s-val" for="' + id + '"></output></div>' +
@@ -215,7 +215,7 @@
       var on = answers[key] != null;
       w.classList.toggle('set', on);
       if (on) input.value = answers[key];
-      out.textContent = on ? answers[key] + '%' : 'Drag to answer';
+      out.textContent = on ? answers[key] + '%' : blank || 'Drag to answer';
       input.style.setProperty('--fill', (on ? answers[key] : 0) + '%');
     }
     function take() { answers[key] = Number(input.value); show(); if (onTake) onTake(); }
@@ -368,17 +368,27 @@
       '<div class="bubble"><h2 class="card" tabindex="-1">' + title + '</h2>' +
       (desc ? '<p class="desc">' + desc + '</p>' : '') + '</div></div>';
   }
-  // Tabs over one player, for screens that compare versions of a clip.
-  function tabbed(options, sound, onSelect) {
+  // Tabs over one player, for screens that compare versions of a clip. Each
+  // tab shows a coral dot until it is done, then a tick. mark says what done
+  // means: 'seen' (its clip played through, ticked here) or 'done' (rated,
+  // ticked by the screen).
+  function tabbed(options, sound, onSelect, mark) {
     var box = el('div', 'vside');
     var tabs = el('div', 'tabs');
+    tabs.setAttribute('data-mark', mark || 'seen');
     var p = player(options[0][0], { sound: sound });
+    var cur = 0;
     options.forEach(function (o, i) {
-      var b = el('button', 'tab', '<b>' + LETTERS[i] + '</b> ' + esc(o[1])); b.type = 'button';
+      var b = el('button', 'tab', '<b>' + LETTERS[i] + '</b><span>' + esc(o[1]) + '</span>'); b.type = 'button';
       b.addEventListener('click', function () { select(i, true); });
       tabs.appendChild(b);
     });
+    var v = p.querySelector('video');
+    v.addEventListener('timeupdate', function () {
+      if (v.duration && v.currentTime / v.duration > 0.9) tabs.children[cur].classList.add('seen');
+    });
     function select(i, go) {
+      cur = i;
       Array.prototype.forEach.call(tabs.children, function (b, n) { b.classList.toggle('on', n === i); b.setAttribute('aria-pressed', n === i ? 'true' : 'false'); });
       p.load(options[i][0]);
       if (go) p.play();
@@ -386,7 +396,7 @@
     }
     box.appendChild(tabs); box.appendChild(p);
     select(0, false);
-    return { box: box, player: p };
+    return { box: box, player: p, tabs: tabs, select: select };
   }
 
   // ---- Screens ---------------------------------------------------------------
@@ -421,19 +431,27 @@
       var t = s.type;
       var key = 'p2_' + t.id + '_watch';
       var lay = el('div', 'vlayout');
-      // One slider per edit, shown with the tab that is playing.
+      // A short slider row per edit, all visible. The row for the playing
+      // clip is lit, and its letter plays that clip.
       var rate = el('fieldset', 'choice');
       var legend = el('legend');
       rate.appendChild(legend);
-      var sliders = t.edits.map(function (n, i) {
-        var w = slider(key + i, 'How long would you watch ' + LETTERS[i] + ', ' + n + '?', 'Scroll past', 'Watch it all', combine);
-        rate.appendChild(w);
-        return w;
+      var rows = t.edits.map(function (n, i) {
+        var row = el('div', 'rate-row');
+        var play = el('button', 'rate-let', LETTERS[i]);
+        play.type = 'button';
+        play.setAttribute('aria-label', 'Play ' + LETTERS[i] + ', ' + n);
+        play.addEventListener('click', function () { tb.select(i, true); });
+        row.appendChild(play);
+        row.appendChild(slider(key + i, 'How long would you watch ' + LETTERS[i] + ', ' + n + '?', 'Scroll past', 'Watch it all', combine, '–'));
+        rate.appendChild(row);
+        return row;
       });
+      rate.appendChild(el('div', 'ends rate-ends', '<span>Scroll past</span><span>Watch it all</span>'));
+      legend.textContent = 'How long would you watch each one?';
       var tb = tabbed(t.edits.map(function (n, i) { return ['edit-' + t.dir + '-' + 'abc'[i], n]; }), true, function (i) {
-        legend.innerHTML = 'How long would you watch <b>' + LETTERS[i] + '</b>?';
-        sliders.forEach(function (w, n) { w.hidden = n !== i; });
-      });
+        rows.forEach(function (r, n) { r.classList.toggle('on', n === i); });
+      }, 'done');
       lay.appendChild(tb.box);
       var body = el('div', 'vbody');
       body.innerHTML = head(s, t.title, t.edits.length + ' ways to edit the same video. Watch each, then pick.');
@@ -446,10 +464,15 @@
         var r = t.edits.map(function (n, i) { return i; }).filter(function (i) { return answers[key + i] != null; })
           .sort(function (a, b) { return answers[key + b] - answers[key + a]; });
         answers[key] = r.length ? r.map(function (i) { return LETTERS[i] + ': ' + t.edits[i] + ' ' + answers[key + i]; }).join(' | ') : null;
+        ticks();
         if (r.length < t.edits.length || !second.hidden) return;
         second.hidden = false;
         setTimeout(function () { second.scrollIntoView({ behavior: reduce.matches ? 'auto' : 'smooth', block: 'center' }); }, 120);
       }
+      function ticks() {
+        Array.prototype.forEach.call(tb.tabs.children, function (b, i) { b.classList.toggle('done', answers[key + i] != null); });
+      }
+      ticks();
       body.appendChild(second);
       body.appendChild(dock());
       lay.appendChild(body);
@@ -602,7 +625,9 @@
     if (video) {
       // While watching, the question peeks above the dock as a card; tapping it opens the answers.
       var dk = sec.querySelector('.vbody > .dock');
-      var peek = el('button', 'peek', '<i class="grab" aria-hidden="true"></i><span>' + sec.querySelector('.bubble .card').innerHTML + '</span>');
+      var nTabs = sec.querySelectorAll('.tab').length;
+      var peek = el('button', 'peek', '<i class="grab" aria-hidden="true"></i>' + (nTabs ? '<small>Watch all ' + nTabs + '</small>' : '') +
+        '<span>' + sec.querySelector('.bubble .card').innerHTML + '</span>');
       peek.type = 'button';
       peek.setAttribute('data-next', '');
       dk.parentNode.insertBefore(peek, dk);
