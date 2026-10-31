@@ -336,7 +336,7 @@
     return w;
   }
 
-  var BACK_BTN = '<button type="button" class="back" data-back aria-label="Back"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>';
+  var BACK_BTN = '<button type="button" class="back" data-back><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Back</span></button>';
   // Back and Next share one row at the bottom of each screen.
   function dock(label) {
     var d = el('div', 'actions dock', BACK_BTN);
