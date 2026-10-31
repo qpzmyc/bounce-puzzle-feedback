@@ -13,34 +13,32 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 ENV = {**os.environ, "GOOGLE_WORKSPACE_CLI_CONFIG_DIR": os.path.expanduser("~/.config/gws-personal")}
 
 HOOKS = [("attempt", "Attempt 78"), ("nearmiss", "Near-miss slow-mo"), ("pov", "POV"),
-         ("zoom", "Zoom out"), ("plain", "Straight in"), ("story", "Story")]
+         ("zoom", "Zoom out"), ("plain", "Straight in")]
 EDITS = [("cys", "Can you solve this", ["Countdown ring", "Rewind reveal", "Wipe reveal"]),
          ("wl", "Which one wins", ["Knockout grid", "Study and sweep", "Head to head"]),
          ("ftw", "How many tries", ["Death counter", "The wall", "Rewind"])]
 
 # (answer key, question title, long answer)
 QUESTIONS = [(f"p1_{k}", f"Part 1. {n}: keep watching (%)", False) for k, n in HOOKS]
-QUESTIONS += [("p1_rank", "Part 1. Openings ranked, best first", True)]
+QUESTIONS += [("p1_rank", "Part 1. Openings ranked for keep watching, best first", True),
+              ("p1_rank_download", "Part 1. Openings ranked for download, best first", True)]
+QUESTIONS += [(f"p1_{k}_ai", f"Part 1. {n}: feels AI-made (1 to 5)", False) for k, n in HOOKS]
 for k, n, _ in EDITS:
-    QUESTIONS += [(f"p2_{k}_watch", f"Part 2. {n}: rather watch", False),
+    QUESTIONS += [(f"p2_{k}_watch", f"Part 2. {n}: how long they'd watch each (0 to 100, highest first)", False),
                   (f"p2_{k}_download", f"Part 2. {n}: most likely to download", False)]
-QUESTIONS += [("p3_plots", "Part 3. Story plots ranked, best first", True),
+QUESTIONS += [("p3_plots", "Part 3. Story first lines ranked, best first", True),
+              ("p3_plot_text", "Part 3. Sibling stories (full plot) ranked, best first", True),
               ("p3_caption", "Part 3. Caption look", False),
               ("p3_hook", "Part 3. Story opening", False),
               ("p3_narration", "Part 3. Narration speed", False)]
-for k, n in HOOKS:
-    QUESTIONS += [(f"p4_{k}_download", f"Part 4. {n}: makes me want to download (1 to 5)", False),
-                  (f"p4_{k}_ai", f"Part 4. {n}: feels AI-made (1 to 5)", False)]
-for k, _, names in EDITS:
-    for letter, n in zip("abc", names):
-        QUESTIONS += [(f"p4_{k}_{letter}_download", f"Part 4. {n}: makes me want to download (1 to 5)", False),
-                      (f"p4_{k}_{letter}_ai", f"Part 4. {n}: feels AI-made (1 to 5)", False)]
 QUESTIONS += [("seen", "Have you seen Bounce Puzzle videos on social media?", False),
               ("played", "Have you played Bounce Puzzle?", False),
               ("far", "How far did you get?", False),
               ("where", "Where do you watch short videos most?", False),
               ("else", "Anything else?", True),
-              ("name", "Name", False)]
+              ("name", "Name", False),
+              ("sid", "Response ID (matches early saves to the final send)", False),
+              ("finished", "Finished (yes = pressed Send, no = left early)", False)]
 
 
 def gws(*args, body=None, params=None):

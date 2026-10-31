@@ -6,30 +6,18 @@
   // Answer key -> that form's field, one question per key.
   var FIELDS = {
     p1_attempt: 'entry.922237877', p1_nearmiss: 'entry.1168707383', p1_pov: 'entry.328582414',
-    p1_zoom: 'entry.2123002075', p1_plain: 'entry.300313336', p1_story: 'entry.1453603898',
-    p1_rank: 'entry.1396488421',
+    p1_zoom: 'entry.2123002075', p1_plain: 'entry.300313336',
+    p1_rank: 'entry.1396488421', p1_rank_download: 'entry.698736129',
+    p1_attempt_ai: 'entry.1512318448', p1_nearmiss_ai: 'entry.1946689651', p1_pov_ai: 'entry.2089592694',
+    p1_zoom_ai: 'entry.257282164', p1_plain_ai: 'entry.2032082460',
     p2_cys_watch: 'entry.2096683130', p2_cys_download: 'entry.1799300103',
     p2_wl_watch: 'entry.178458060', p2_wl_download: 'entry.80376627',
     p2_ftw_watch: 'entry.1484879136', p2_ftw_download: 'entry.1113555680',
-    p3_plots: 'entry.1050931446', p3_caption: 'entry.2139227982', p3_hook: 'entry.1283367253',
+    p3_plots: 'entry.1050931446', p3_plot_text: 'entry.667428298', p3_caption: 'entry.2139227982', p3_hook: 'entry.1283367253',
     p3_narration: 'entry.2112229059',
-    p4_attempt_download: 'entry.1483400404', p4_attempt_ai: 'entry.1512318448',
-    p4_nearmiss_download: 'entry.1941313749', p4_nearmiss_ai: 'entry.1946689651',
-    p4_pov_download: 'entry.1602677458', p4_pov_ai: 'entry.2089592694',
-    p4_zoom_download: 'entry.22883535', p4_zoom_ai: 'entry.257282164',
-    p4_plain_download: 'entry.285032175', p4_plain_ai: 'entry.2032082460',
-    p4_story_download: 'entry.72826915', p4_story_ai: 'entry.1815440718',
-    p4_cys_a_download: 'entry.562780157', p4_cys_a_ai: 'entry.1708879938',
-    p4_cys_b_download: 'entry.380603299', p4_cys_b_ai: 'entry.729774536',
-    p4_cys_c_download: 'entry.261140446', p4_cys_c_ai: 'entry.789805737',
-    p4_wl_a_download: 'entry.980363858', p4_wl_a_ai: 'entry.2059678509',
-    p4_wl_b_download: 'entry.382817224', p4_wl_b_ai: 'entry.1138408118',
-    p4_wl_c_download: 'entry.1209036199', p4_wl_c_ai: 'entry.2061737866',
-    p4_ftw_a_download: 'entry.224541826', p4_ftw_a_ai: 'entry.107544750',
-    p4_ftw_b_download: 'entry.972061131', p4_ftw_b_ai: 'entry.968958957',
-    p4_ftw_c_download: 'entry.707817124', p4_ftw_c_ai: 'entry.415836664',
     seen: 'entry.1326805459', played: 'entry.1262496214', far: 'entry.1677435559', where: 'entry.1924391642',
-    else: 'entry.1884087134', name: 'entry.1343568917'
+    else: 'entry.1884087134', name: 'entry.1343568917',
+    sid: 'entry.983195683', finished: 'entry.908961105'
   };
   var QUERY = new URLSearchParams(location.search);
   // ?cheng=1 shows Cheng's own answers as text to copy, instead of sending them.
@@ -46,8 +34,7 @@
     { id: 'nearmiss', clip: 'hook-nearmiss', name: 'Near-miss slow-mo' },
     { id: 'pov', clip: 'hook-pov', name: 'POV' },
     { id: 'zoom', clip: 'hook-zoom', name: 'Zoom out' },
-    { id: 'plain', clip: 'hook-plain', name: 'Straight in' },
-    { id: 'story', clip: 'hook-story', name: 'Story', sound: true }
+    { id: 'plain', clip: 'hook-plain', name: 'Straight in' }
   ];
   var TYPES = [
     { id: 'cys', dir: 'can-you-solve', title: 'Can you solve <em>this?</em>', edits: ['Countdown ring', 'Rewind reveal', 'Wipe reveal'] },
@@ -65,28 +52,45 @@
     { name: 'A DNA test found the sister I never knew, two streets away', text: 'My parents always told me I was an only child. Then a DNA test said I had a sister, and she lives two streets away.' },
     { name: 'Someone left us coffee every Monday. The camera caught the old owner', text: 'For three months, someone left a hot coffee on our porch every Monday at 6am. When we finally set up a camera, it was the old man who used to own our house.' }
   ];
+  // The full-plot ranking: a new story on the same idea as each first line
+  // above, so nobody ranks the same story twice. name is the label saved.
+  var SIBLINGS = [
+    { name: 'Prom sign', text: 'I asked my crush to prom with a sign in the cafeteria, and she said no in front of everyone. An hour later her best friend told me why. She’d been planning to ask me that afternoon, and I’d ruined her surprise.' },
+    { name: 'Parking officer mom', text: 'My neighbor reported my car for parking too close to her driveway. The parking officer who came out to check was my mom. She measured, and it was the neighbor’s car that was over the line.' },
+    { name: 'Show every step', text: 'My math teacher said we had to show every step of our working, no exceptions. So on the next test, for 2 + 3, I handed in a full page proving it equals 5.' },
+    { name: 'Toothpaste cookies', text: 'My little brother kept stealing cookies from my jar and swore it wasn’t him. So I baked a batch with toothpaste instead of frosting and left them on top. He hasn’t touched the jar since.' },
+    { name: 'Cousin’s DJ', text: 'My cousin didn’t invite me to her birthday party because I’m “too loud”. The day before, her DJ cancelled, and the only one free that weekend was me.' },
+    { name: 'Sick on my birthday', text: 'My best friend said she was too sick to come to my birthday. That night my sister showed me her story from a party across town, with my ex.' },
+    { name: 'Cousin in math class', text: 'I sat next to the same guy in math for three years. At my grandma’s 80th birthday, he walked in carrying the cake. He’s my cousin, and nobody ever told either of us.' },
+    { name: 'Snow shoveler', text: 'Every winter, someone shovels our driveway before we wake up. Last year we stayed up to catch them. It was the kid next door, paying back the summer my dad taught him to ride a bike.' }
+  ];
   var LETTERS = 'ABCD';
 
   var SCREENS = [];
   HOOKS.forEach(function (h, i) {
     SCREENS.push({ kind: 'hook', part: 'First impressions', step: (i + 1) + ' of ' + HOOKS.length, hook: h });
   });
-  SCREENS.push({ kind: 'rank-hooks', part: 'First impressions' });
+  SCREENS.push({ kind: 'rank-hooks', part: 'First impressions', key: 'p1_rank',
+    title: 'Which would you keep <em>watching?</em>', desc: 'Tap the openings from the one you’d most keep watching to the least.' });
+  SCREENS.push({ kind: 'rank-hooks', part: 'First impressions', key: 'p1_rank_download',
+    title: 'Which would make you <em>download</em> it?', desc: 'Same openings. Tap them from most likely to least.' });
   TYPES.forEach(function (t, i) {
     SCREENS.push({ kind: 'compare', part: 'Editing styles', step: (i + 1) + ' of ' + TYPES.length, type: t });
   });
-  SCREENS.push({ kind: 'rank-plots', part: 'Stories' });
+  SCREENS.push({ kind: 'rank-plots', part: 'Stories', key: 'p3_plots', items: PLOTS, show: 'name',
+    title: 'Which <em>first lines</em> grab you?', desc: 'Just the opening line of each story. Tap them from best to worst.' });
+  SCREENS.push({ kind: 'rank-plots', part: 'Stories', key: 'p3_plot_text', items: SIBLINGS, show: 'text',
+    title: 'Which stories would you <em>watch?</em>', desc: 'The whole plot this time. Tap them from the one you’d most want to hear to the least.' });
   SCREENS.push({ kind: 'pick', part: 'Stories', key: 'p3_caption', title: 'Which <em>captions</em> do you like most?',
     sound: true, options: [['caption-current', 'Classic'], ['caption-highlight', 'Highlight'], ['caption-pill', 'Pill'], ['caption-editorial', 'Editorial']] });
   SCREENS.push({ kind: 'pick', part: 'Stories', key: 'p3_hook', title: 'Which <em>opening</em> do you like most?',
     sound: true, options: [['storyhook-slam', 'Slam'], ['storyhook-freeze', 'Freeze'], ['storyhook-card', 'Card']] });
   SCREENS.push({ kind: 'pick', part: 'Stories', key: 'p3_narration', title: 'Which <em>speed</em> sounds best?',
     sound: true, needSound: true, options: [['narration-125', 'Slower'], ['narration-135', 'Middle'], ['narration-145', 'Faster']] });
-  SCREENS.push({ kind: 'review', part: 'Looking back' });
   SCREENS.push({ kind: 'q', part: 'Last bit', key: 'seen', title: 'Seen our videos on <em>social media?</em>', options: ['Yes, a lot', 'A few times', 'No'] });
   SCREENS.push({ kind: 'q', part: 'Last bit', key: 'played', title: 'Have you played <em>Bounce Puzzle?</em>', options: ['Still playing', 'Tried it', 'Not yet'],
-    follow: { key: 'far', unless: 2, title: 'How far did you get?', options: ['World 1 to 2', 'World 3 to 5', 'World 6 to 8', 'Finished'] } });
-  SCREENS.push({ kind: 'q', part: 'Last bit', key: 'where', title: 'Where do you watch short videos <em>most?</em>', options: ['Instagram', 'TikTok', 'YouTube', 'Snapchat'] });
+    follow: { key: 'far', unless: 2, title: 'How far did you get?', options: ['1 to 5 levels', '6 to 12 levels', '13 to 24 levels', '25+ levels'] } });
+  SCREENS.push({ kind: 'q', part: 'Last bit', key: 'where', title: 'Where do you watch short videos <em>most?</em>', options: ['Instagram', 'TikTok', 'YouTube'] });
   SCREENS.push({ kind: 'about' });
   SCREENS.push({ kind: 'thanks' });
 
@@ -96,10 +100,23 @@
   var answers = {};
   var soundOn = false;
 
+  // Answers are kept on their phone, so a reload picks up where they left off,
+  // and sent early if they leave before pressing Send. sid matches those early
+  // rows to the final one in the sheet.
+  var STORE = DRY ? 'bp-feedback-dry' : 'bp-feedback';
+  var saved = null;
+  try { saved = JSON.parse(localStorage.getItem(STORE)); } catch (e) {}
+  if (saved && saved.done) saved = null;
+  if (saved && saved.answers) answers = saved.answers;
+  var sid = (saved && saved.sid) || Math.random().toString(36).slice(2, 10);
+  var sent = false;
+  function persist() {
+    try { localStorage.setItem(STORE, JSON.stringify({ sid: sid, answers: answers, at: current, done: sent })); } catch (e) {}
+  }
+
   var form = document.getElementById('form');
   var holder = document.getElementById('screens');
   var bar = document.querySelector('.bar');
-  var backBtn = document.getElementById('back');
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
 
   function el(tag, cls, html) {
@@ -112,11 +129,15 @@
 
   // ---- Pieces ----------------------------------------------------------------
 
-  // A clip with its own controls: tap to pause, a scrub bar, replay, and sound
-  // for the clips that have it.
+  // A clip with its own controls under it, so they never cover the clip: play
+  // and pause, replay, a scrub bar, and sound for the clips that have it.
+  // Tapping the clip also pauses it.
+  var PAUSE_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/></svg>';
+  var PLAY_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5l11 7-11 7z" fill="currentColor"/></svg>';
   function player(clip, opts) {
     opts = opts || {};
     var w = el('div', 'player');
+    var frame = el('div', 'p-frame');
     var v = el('video');
     v.src = 'clips/' + clip + '.mp4';
     // The poster loads only once the clip's screen opens, so the first screen
@@ -125,12 +146,13 @@
     v.muted = true; v.loop = true; v.playsInline = true; v.preload = 'none';
     v.setAttribute('playsinline', '');
     var tap = el('button', 'p-tap'); tap.type = 'button'; tap.setAttribute('aria-label', 'Pause');
-    tap.innerHTML = '<svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5l11 7-11 7z" fill="currentColor"/></svg>';
+    tap.innerHTML = PLAY_SVG.replace('<svg', '<svg class="i-play"');
     var ctr = el('div', 'p-bar');
+    var pp = el('button', 'p-btn'); pp.type = 'button'; pp.setAttribute('aria-label', 'Pause'); pp.innerHTML = PAUSE_SVG;
     var replay = el('button', 'p-btn'); replay.type = 'button'; replay.setAttribute('aria-label', 'Replay from the start');
     replay.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4h4" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     var scrub = el('input', 'p-scrub'); scrub.type = 'range'; scrub.min = 0; scrub.max = 1000; scrub.value = 0; scrub.setAttribute('aria-label', 'Position in the clip');
-    ctr.appendChild(replay); ctr.appendChild(scrub);
+    ctr.appendChild(pp); ctr.appendChild(replay); ctr.appendChild(scrub);
     var snd = null;
     if (opts.sound) {
       snd = el('button', 'p-btn p-sound'); snd.type = 'button';
@@ -140,7 +162,8 @@
         document.querySelectorAll('.player').forEach(function (p) { if (p.sync) p.sync(); });
       });
     }
-    w.appendChild(v); w.appendChild(tap); w.appendChild(ctr);
+    frame.appendChild(v); frame.appendChild(tap);
+    w.appendChild(frame); w.appendChild(ctr);
     w.sync = function () {
       if (!snd) return;
       v.muted = !soundOn;
@@ -152,13 +175,15 @@
     };
     w.sync();
     var dragging = false;
-    tap.addEventListener('click', function () { if (v.paused) play(); else v.pause(); });
+    function toggle() { if (v.paused) play(); else v.pause(); }
+    tap.addEventListener('click', toggle);
+    pp.addEventListener('click', toggle);
     replay.addEventListener('click', function () { v.currentTime = 0; play(); });
     scrub.addEventListener('input', function () { dragging = true; if (v.duration) v.currentTime = scrub.value / 1000 * v.duration; });
     scrub.addEventListener('change', function () { dragging = false; });
     v.addEventListener('timeupdate', function () { if (!dragging && v.duration) scrub.value = Math.round(v.currentTime / v.duration * 1000); });
-    v.addEventListener('play', function () { w.classList.remove('paused'); tap.setAttribute('aria-label', 'Pause'); });
-    v.addEventListener('pause', function () { w.classList.add('paused'); tap.setAttribute('aria-label', 'Play'); });
+    v.addEventListener('play', function () { w.classList.remove('paused'); tap.setAttribute('aria-label', 'Pause'); pp.setAttribute('aria-label', 'Pause'); pp.innerHTML = PAUSE_SVG; });
+    v.addEventListener('pause', function () { w.classList.add('paused'); tap.setAttribute('aria-label', 'Play'); pp.setAttribute('aria-label', 'Play'); pp.innerHTML = PLAY_SVG; });
     function play() {
       if (v.getAttribute('poster') !== poster) v.poster = poster;
       v.preload = 'auto';
@@ -265,11 +290,109 @@
     return w;
   }
 
+  // Each option is a ball dropped on one line from "Scroll past" to "Watch it
+  // all", so both the order and the gaps get saved. A tap on a ball and then
+  // on the line places it too, and arrow keys move a focused ball.
+  function placer(key, question, options, onDone) {
+    var w = el('fieldset', 'choice placer');
+    w.innerHTML = '<legend>' + question + '</legend><div class="pl-line"><p class="pl-tip"></p><div class="pl-track"></div>' +
+      '<span class="pl-end">Scroll past</span><span class="pl-end r">Watch it all</span></div>';
+    var line = w.querySelector('.pl-line');
+    var tip = w.querySelector('.pl-tip');
+    var clear = el('button', 'btn ghost pl-clear', 'Start over'); clear.type = 'button';
+    w.appendChild(clear);
+    var pos = {}, sel = null, dragged = false;
+    // Saved as "A: name 80 | C: name 55 | B: name 20", highest first.
+    (answers[key] || '').split(' | ').forEach(function (part) {
+      var m = /^([A-D]): .* (\d+)$/.exec(part);
+      if (m) pos[LETTERS.indexOf(m[1])] = Number(m[2]);
+    });
+    var balls = options.map(function (o, i) {
+      var b = el('button', 'pl-ball', LETTERS[i]);
+      b.type = 'button';
+      b.setAttribute('data-i', i);
+      line.appendChild(b);
+      b.addEventListener('pointerdown', function (e) {
+        b.setPointerCapture(e.pointerId);
+        b.classList.add('drag');
+        dragged = false;
+        b.startX = e.clientX;
+      });
+      b.addEventListener('pointermove', function (e) {
+        if (!b.classList.contains('drag')) return;
+        if (!dragged && Math.abs(e.clientX - b.startX) < 6) return;
+        dragged = true;
+        pos[i] = pct(e.clientX);
+        draw();
+      });
+      b.addEventListener('pointerup', function () { b.classList.remove('drag'); if (dragged) { sel = null; save(); } });
+      b.addEventListener('pointercancel', function () { b.classList.remove('drag'); });
+      b.addEventListener('click', function () { if (dragged) return; sel = sel === i ? null : i; draw(); });
+      b.addEventListener('keydown', function (e) {
+        var d = e.key === 'ArrowRight' || e.key === 'ArrowUp' ? 5 : e.key === 'ArrowLeft' || e.key === 'ArrowDown' ? -5 : 0;
+        if (!d) return;
+        e.preventDefault();
+        pos[i] = Math.max(0, Math.min(100, (pos[i] == null ? 50 : pos[i]) + d));
+        save();
+      });
+      return b;
+    });
+    line.addEventListener('click', function (e) {
+      if (sel == null || e.target.closest('.pl-ball')) return;
+      pos[sel] = pct(e.clientX);
+      sel = null;
+      save();
+    });
+    clear.addEventListener('click', function () { pos = {}; sel = null; save(); });
+    function pct(x) {
+      var r = line.getBoundingClientRect();
+      return Math.round(Math.max(0, Math.min(100, (x - r.left - 22) / (r.width - 44) * 100)));
+    }
+    function placed() {
+      return options.map(function (o, i) { return i; }).filter(function (i) { return pos[i] != null; })
+        .sort(function (a, b) { return pos[b] - pos[a]; });
+    }
+    function draw() {
+      balls.forEach(function (b, i) {
+        if (pos[i] == null) {
+          b.style.left = 'calc(50% + ' + (i - (options.length - 1) / 2) * 58 + 'px)';
+          b.style.top = '76px';
+        } else {
+          // Balls close together stack upward, so none hides another.
+          var lift = 0;
+          for (var j = 0; j < i; j++) if (pos[j] != null && Math.abs(pos[j] - pos[i]) < 9) lift += 32;
+          b.style.left = 'calc(22px + (100% - 44px) * ' + pos[i] / 100 + ')';
+          b.style.top = (23 - lift) + 'px';
+        }
+        b.classList.toggle('sel', sel === i);
+        b.setAttribute('aria-label', LETTERS[i] + ', ' + options[i] + (pos[i] == null ? ', not placed. Arrow keys place it' : ', at ' + pos[i] + ' out of 100'));
+      });
+      var n = placed().length;
+      tip.textContent = sel != null ? 'Now tap a spot on the line' : !n ? 'Drag each ball onto the line' : n < options.length ? (options.length - n) + ' to go' : 'All placed';
+      clear.hidden = !n;
+      w.classList.toggle('set', n > 0);
+    }
+    function save() {
+      var p = placed();
+      answers[key] = p.length ? p.map(function (i) { return LETTERS[i] + ': ' + options[i] + ' ' + pos[i]; }).join(' | ') : null;
+      draw();
+      if (p.length === options.length && onDone) onDone();
+    }
+    draw();
+    return w;
+  }
+
   // Tap the items from best to worst. Tapping a ranked item takes it, and
   // every one after it, back out.
   function ranker(key, items, render, cls) {
     var w = el('div', 'rank ' + (cls || ''));
     var order = [];
+    // A ranking saved before a reload, as "1. name | 2. name".
+    var names = items.map(function (it) { return typeof it === 'string' ? it : it.name; });
+    (answers[key] || '').split(' | ').forEach(function (part) {
+      var i = names.indexOf(part.replace(/^\d+\. /, ''));
+      if (i >= 0) order.push(i);
+    });
     var cells = items.map(function (it, i) {
       var b = el('button', 'r-item');
       b.type = 'button';
@@ -306,8 +429,10 @@
     return w;
   }
 
+  var BACK_BTN = '<button type="button" class="back" data-back aria-label="Back"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>';
+  // Back and Next share one row at the bottom of each screen.
   function dock(label) {
-    var d = el('div', 'actions dock');
+    var d = el('div', 'actions dock', BACK_BTN);
     var b = el('button', 'btn primary', label || 'Next');
     b.type = 'button';
     b.setAttribute('data-next', '');
@@ -319,7 +444,7 @@
   function refreshDock(sec) {
     var b = sec && sec.querySelector('.dock [data-next]');
     if (!b) return;
-    var has = !!sec.querySelector('.c-opt.on, .r5.on, .r-item.ranked, .slider.set');
+    var has = !!sec.querySelector('.c-opt.on, .r5.on, .r-item.ranked, .slider.set, .placer.set');
     b.textContent = has ? 'Next' : 'Skip';
     b.classList.toggle('quiet', !has);
   }
@@ -363,6 +488,8 @@
       var body = el('div', 'vbody');
       body.innerHTML = head(s, 'Would you keep <em>watching?</em>');
       body.appendChild(slider('p1_' + s.hook.id, 'How likely are you to keep watching?', 'Scroll', 'Keep watching'));
+      // The gut reaction on first watch, the way a scrolling viewer meets it.
+      body.appendChild(rate5('p1_' + s.hook.id + '_ai', 'Feels AI-made', 'Not at all', 'Completely'));
       body.appendChild(dock());
       lay.appendChild(body);
       sec.appendChild(lay);
@@ -370,8 +497,8 @@
     },
     'rank-hooks': function (s, sec) {
       var col = el('div', 'col wide');
-      col.innerHTML = head(s, 'Rank the <em>openings</em>', 'Tap them from best to worst.');
-      col.appendChild(ranker('p1_rank', HOOKS, function (h) {
+      col.innerHTML = head(s, s.title, s.desc);
+      col.appendChild(ranker(s.key, HOOKS, function (h) {
         return '<img src="clips/' + h.clip + '.jpg" alt="" loading="lazy"><span>' + esc(h.name) + '</span>';
       }, 'thumbs'));
       col.appendChild(dock());
@@ -384,10 +511,10 @@
       lay.appendChild(tb.box);
       var body = el('div', 'vbody');
       body.innerHTML = head(s, t.title, t.edits.length + ' ways to edit the same video. Watch each, then pick.');
-      // One question at a time: the second appears once the first is answered.
+      // One question at a time: the second appears once all three are placed.
       var second = choice('p2_' + t.id + '_download', 'Which makes you most likely to download the game?', t.edits);
-      second.hidden = !answers['p2_' + t.id + '_watch'];
-      body.appendChild(choice('p2_' + t.id + '_watch', 'Which would you rather watch?', t.edits, function () {
+      second.hidden = !/(\|.*){2}/.test(answers['p2_' + t.id + '_watch'] || '');
+      body.appendChild(placer('p2_' + t.id + '_watch', 'How long would you watch each one?', t.edits, function () {
         if (!second.hidden) return;
         second.hidden = false;
         setTimeout(function () { second.scrollIntoView({ behavior: reduce.matches ? 'auto' : 'smooth', block: 'center' }); }, 120);
@@ -400,8 +527,8 @@
     },
     'rank-plots': function (s, sec) {
       var col = el('div', 'col wide');
-      col.innerHTML = head(s, 'Which stories would you <em>watch?</em>', 'Tap them from the one you’d most want to hear to the least.');
-      col.appendChild(ranker('p3_plots', PLOTS, function (p) { return '<span>' + esc(p.name) + '</span>'; }, 'texts'));
+      col.innerHTML = head(s, s.title, s.desc);
+      col.appendChild(ranker(s.key, s.items, function (p) { return '<span>' + esc(p[s.show]) + '</span>'; }, 'texts'));
       col.appendChild(dock());
       sec.appendChild(col);
     },
@@ -416,57 +543,6 @@
       lay.appendChild(body);
       sec.appendChild(lay);
       sec.players = [tb.player];
-    },
-    // One clip at a time, with its own count. Next and Back step through the
-    // clips before leaving the screen, and both ratings in moves on by itself.
-    review: function (s, sec) {
-      var lay = el('div', 'vlayout');
-      var side = el('div', 'vside');
-      var p = player(HOOKS[0].clip, { sound: true });
-      side.appendChild(p);
-      lay.appendChild(side);
-      var body = el('div', 'vbody');
-      var top = el('div');
-      var rates = el('div');
-      body.appendChild(top);
-      body.appendChild(rates);
-      var d = dock();
-      body.appendChild(d);
-      lay.appendChild(body);
-      sec.appendChild(lay);
-      sec.players = [p];
-      var items = [], at = 0, timer = null;
-      function render() {
-        clearTimeout(timer);
-        var it = items[at];
-        top.innerHTML = head({ part: 'Looking back', step: (at + 1) + ' of ' + items.length }, esc(it.name));
-        rates.innerHTML = '';
-        var keys = ['p4_' + it.id + '_download', 'p4_' + it.id + '_ai'];
-        function check() {
-          if (answers[keys[0]] && answers[keys[1]]) timer = setTimeout(next, 550);
-        }
-        [rate5(keys[0], 'Makes me want to download it', 'Not at all', 'Definitely'),
-         rate5(keys[1], 'Feels AI-made', 'Not at all', 'Completely')].forEach(function (r) {
-          r.addEventListener('click', function (e) { if (e.target.closest('.r5')) check(); });
-          rates.appendChild(r);
-        });
-        refreshDock(sec);
-        p.load(it.clip);
-        p.querySelector('.p-sound').hidden = !it.sound;
-        p.sync();
-        p.play();
-        var h = top.querySelector('[tabindex="-1"]');
-        if (h) h.focus({ preventScroll: true });
-      }
-      // Rebuilt each time the screen opens from before, so it shows the edits they picked.
-      sec.onShow = function (dir) {
-        items = reviewItems();
-        at = dir < 0 ? items.length - 1 : 0;
-        render();
-      };
-      sec.next = function () { if (at < items.length - 1) { at++; render(); progress(); return true; } clearTimeout(timer); return false; };
-      sec.back = function () { if (at > 0) { at--; render(); progress(); return true; } clearTimeout(timer); return false; };
-      sec.fraction = function () { return items.length ? at / items.length : 0; };
     },
     // One quick question as full-width rows. A tap moves on by itself, unless
     // the answer opens a follow-up question, which then moves on when answered.
@@ -485,7 +561,7 @@
       }, true));
       if (s.follow) {
         follow = choice(s.follow.key, s.follow.title, s.follow.options, go, false);
-        follow.hidden = true;
+        follow.hidden = !answers[s.key] || answers[s.key].indexOf(LETTERS[s.follow.unless] + ':') === 0;
         col.appendChild(follow);
       }
       col.appendChild(dock());
@@ -501,9 +577,11 @@
         '<input class="text" id="who" type="text" maxlength="100" autocomplete="name" placeholder="First name, or leave it blank">' +
         '<p class="msg" id="msg" role="alert" hidden></p>');
       var d = el('div', 'actions dock');
-      d.innerHTML = '<button type="submit" class="btn primary big" id="send">Send my answers</button>';
+      d.innerHTML = BACK_BTN + '<button type="submit" class="btn primary big" id="send">Send my answers</button>';
       col.appendChild(d);
       sec.appendChild(col);
+      col.querySelector('#more').value = answers.else || '';
+      col.querySelector('#who').value = answers.name || '';
       col.querySelector('#more').addEventListener('input', function (e) { answers.else = e.target.value; });
       col.querySelector('#who').addEventListener('input', function (e) { answers.name = e.target.value; });
     },
@@ -556,8 +634,7 @@
     nearmiss: { name: 'The Slow-mo Snob', color: '#a78bfa', line: 'You live for the almost. One pixel off the goal is your favourite place.' },
     pov: { name: 'The Relatable One', color: '#4ecdc4', line: 'If it feels like you, you watch it. Stuck on a level for an hour? Been there.' },
     zoom: { name: 'The Big Picture', color: '#ffc83d', line: 'You need to see the whole board before you care.' },
-    plain: { name: 'The No-Nonsense Viewer', color: '#95e77e', line: 'No intro, no gimmick. Just show you the level.' },
-    story: { name: 'The Storyteller', color: '#f472b6', line: 'Put a good story on top and you’ll watch anything.' }
+    plain: { name: 'The No-Nonsense Viewer', color: '#95e77e', line: 'No intro, no gimmick. Just show you the level.' }
   };
   function taste() {
     var best = null;
@@ -584,22 +661,9 @@
     else note.textContent = url;
   }
 
-  // The videos for the looking-back screen: every opening, then the edit they
-  // said they'd rather watch for each video type.
-  function reviewItems() {
-    var items = HOOKS.map(function (h) { return { id: h.id, clip: h.clip, name: h.name, sound: h.sound }; });
-    TYPES.forEach(function (t) {
-      var a = answers['p2_' + t.id + '_watch'];
-      if (!a) return;
-      var i = LETTERS.indexOf(a[0]);
-      items.push({ id: t.id + '_' + 'abc'[i], clip: 'edit-' + t.dir + '-' + 'abc'[i], name: t.edits[i], sound: true });
-    });
-    return items;
-  }
-
   var screens = [document.querySelector('[data-screen="welcome"]')];
   SCREENS.forEach(function (s) {
-    var video = s.kind === 'hook' || s.kind === 'compare' || s.kind === 'pick' || s.kind === 'review';
+    var video = s.kind === 'hook' || s.kind === 'compare' || s.kind === 'pick';
     var sec = el('section', 'screen ' + (video ? 'vscreen' : 'tscreen'));
     sec.setAttribute('data-screen', s.kind);
     sec.hidden = true;
@@ -624,12 +688,12 @@
     else (s.players || []).forEach(function (p) { p.sync(); p.play(); });
     progress();
     refreshDock(s);
-    backBtn.hidden = i === 0 || i === last;
     // No chrome on the welcome screen or around the card, so it screenshots clean.
     bar.parentNode.hidden = i === 0 || i === last;
     window.scrollTo(0, 0);
     var h = s.querySelector('[tabindex="-1"]');
     if (h) h.focus({ preventScroll: true });
+    persist();
   }
   // Fills fast early and slower later, which keeps more people going than an
   // even bar (Villar et al. 2013), and hops the ball on every move.
@@ -657,10 +721,10 @@
 
   document.addEventListener('click', function (e) {
     if (e.target.closest('[data-next]')) next();
-    else setTimeout(function () { refreshDock(screens[current]); }, 0);
+    else if (e.target.closest('[data-back]')) back();
+    else setTimeout(function () { refreshDock(screens[current]); persist(); }, 0);
   });
-  document.addEventListener('input', function () { refreshDock(screens[current]); });
-  backBtn.addEventListener('click', back);
+  document.addEventListener('input', function () { refreshDock(screens[current]); persist(); });
   document.addEventListener('keydown', function (e) {
     if (e.key !== 'Enter' || e.altKey) return;
     var tag = (e.target.tagName || '').toLowerCase();
@@ -690,8 +754,11 @@
 
   // ---- Sending ---------------------------------------------------------------
 
-  function collect() {
+  // done: they pressed Send, rather than left early.
+  function collect(done) {
     var fd = new FormData();
+    fd.append(FIELDS.sid, sid);
+    fd.append(FIELDS.finished, done ? 'yes' : 'no');
     var answered = false;
     Object.keys(answers).forEach(function (k) {
       var v = answers[k];
@@ -699,7 +766,7 @@
       v = String(v).trim();
       if (!v) return;
       if (DRY) console.log('[dry-run] ' + k + ' = ' + v);
-      if (FIELDS[k]) fd.append(FIELDS[k], v);
+      if (FIELDS[k] && k !== 'sid' && k !== 'finished') fd.append(FIELDS[k], v);
       if (k !== 'name') answered = true;
     });
     return { fd: fd, answered: answered };
@@ -709,7 +776,7 @@
     e.preventDefault();
     var msg = document.getElementById('msg');
     var sendBtn = document.getElementById('send');
-    var c = collect();
+    var c = collect(true);
     if (!c.answered) {
       msg.textContent = 'Answer at least one question before you send. Use Back to go and rate a video.';
       msg.hidden = false;
@@ -730,11 +797,27 @@
     var sendBtn = document.getElementById('send');
     sendBtn.disabled = false;
     sendBtn.textContent = 'Send my answers';
+    sent = true;
     show(screens.length - 1, 1);
   }
 
-  var scene = document.getElementById('scene');
-  if (reduce.matches && scene.pauseAnimations) scene.pauseAnimations();
-  if (DRY) window.__feedback = { answers: answers, show: show, screens: screens };
-  show(0, 0);
+  // Leaving before Send: send what they have, once per change, without waiting
+  // for an answer. visibilitychange also covers a phone switching apps.
+  var lastEarly = '';
+  function sendEarly() {
+    if (sent) return;
+    var snap = JSON.stringify(answers);
+    if (snap === lastEarly) return;
+    var c = collect(false);
+    if (!c.answered) return;
+    lastEarly = snap;
+    if (DRY) { console.log('[dry-run] early send for ' + sid); return; }
+    try { fetch(FORM_URL, { method: 'POST', mode: 'no-cors', body: c.fd, keepalive: true }); } catch (e) {}
+  }
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') sendEarly(); });
+  window.addEventListener('pagehide', sendEarly);
+
+  if (DRY) window.__feedback = { answers: answers, show: show, screens: screens, sendEarly: sendEarly };
+  // Back where they were, after a reload partway through.
+  show(saved && saved.at > 0 && saved.at < screens.length - 1 ? saved.at : 0, 0);
 })();

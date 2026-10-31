@@ -72,6 +72,24 @@ def ball_path(tr, seed):
     return ball
 
 
+def smooth_ball_path(tr, seed):
+    """Like ball_path, but smooth enough for a zoomed-in camera to follow: the
+    tracker's repeated positions (a missed or repeated frame) are dropped, and
+    the rest are fitted with a parabola around each moment, which is the path
+    a ball in flight takes anyway. Needs numpy."""
+    import numpy as np
+    seen = [[tr["drop"], *seed]] + [b for b in tr["ball"] if b and b[0] > tr["drop"]]
+    P = np.array([seen[0]] + [p for q, p in zip(seen, seen[1:]) if (p[1], p[2]) != (q[1], q[2])], float)
+    def ball(t):
+        w = np.exp(-((P[:, 0] - t) * 30 / 4.0) ** 2)
+        keep = w > 1e-3
+        tt, ww = P[keep, 0] - t, w[keep]
+        A = np.stack([np.ones_like(tt), tt, tt * tt], 1) * ww[:, None]
+        coef = np.linalg.lstsq(A, P[keep, 1:] * ww[:, None], rcond=None)[0]
+        return float(coef[0, 0]), float(coef[0, 1])
+    return ball
+
+
 def crops(script, frames):
     """Writes a sendcmd script that sets the crop for each output frame, from
     (zoom, ball x, ball y) per frame. The camera is smoothed so it doesn't
@@ -103,48 +121,73 @@ def zoom(name, level, seed, pre=0.6, post=1.0, hold=0.1, over=1.6, z0=3.0):
     script.unlink()
 
 
-def nearmiss_zoom(name, level, seed, near, pre=0.6, post=0.5, slow=0.12, half=0.12, ease=0.3, zin=2.6, hi=240):
+def camera(imgs, frames, out):
+    """Renders one image per output frame, cropped to (zoom, ball x, ball y)
+    and placed to a fraction of a pixel, so a slow zoom glides instead of
+    stepping a pixel at a time. The path given must already be smooth; it is
+    only kept inside the frame. Needs Pillow."""
+    from PIL import Image
+    enc = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", "720x1280", "-r", "30",
+                            "-i", "-", "-an", *ENC, str(out)], stdin=subprocess.PIPE)
+    for img, (z, sx, sy) in zip(imgs, frames):
+        w, h = 1080 / z, 1920 / z
+        x, y = min(1080 - w, max(0, sx - w / 2)), min(1920 - h, max(0, sy - h / 2))
+        enc.stdin.write(Image.open(img).convert("RGB").resize((720, 1280), Image.LANCZOS, box=(x, y, x + w, y + h)).tobytes())
+    enc.stdin.close()
+    enc.wait()
+
+
+def nearmiss_zoom(name, level, seed, near, pre=0.6, post=0.5, slow=0.25, half=0.12, ease=0.3, after=0.0, ease_out=0.08, zin=2.6):
     """A winning run that slows down and zooms in on the ball through each
     near-death, then speeds up and pulls back out. near is the times of the
-    close calls in the clip. Around each one, tools/smooth.py redraws the ball
-    at `hi` fps, so the slow motion stays smooth and sharp."""
+    close calls in the clip. half and ease set the slow-down before each one,
+    after and ease_out the speed-up after it, kept short so the slow motion
+    ends soon after the ball clears the gap. Through each slow-down,
+    tools/smooth.py makes every frame from the real footage, the real ball
+    moved to a steady pace. Run it with a Python that has numpy and Pillow."""
     tr = TRACK[level]
-    ball = ball_path(tr, seed)
+    ball = smooth_ball_path(tr, seed)
     a, b = tr["drop"] - pre, tr["land"] + post
     frames, src, t = [], [], a
     while t < b:
-        d = min(abs(t - c) for c in near)
-        k = max(0.0, min(1.0, (half + ease - d) / ease))    # 0 away from a close call, 1 inside it
+        k = 0.0                                             # 0 away from a close call, 1 inside it
+        for c in near:
+            lead, ramp = (half, ease) if t < c else (after, ease_out)
+            k = max(k, min(1.0, (lead + ramp - abs(t - c)) / ramp))
         k = k * k * (3 - 2 * k)
-        frames.append((1 + (zin - 1) * k, *ball(t)))
+        # The slow motion ends fast after the gap, but the camera eases back out
+        # over at least half a second, so it never snaps to the whole board.
+        z = 1 + (zin - 1) * k
+        if frames:
+            z = max(z, frames[-1][0] - (zin - 1) / 15)
+        frames.append((z, *ball(t)))
         src.append(t)
         t += (1 - (1 - slow) * k) / 30                      # slow motion eases in with the zoom
-    # Every source frame as an image, at 30 fps away from the close calls and
-    # interpolated to `hi` fps around them. Each output frame links to the
-    # image its time falls on.
-    tmp, seq = OUT / f"{name}-frames", OUT / f"{name}-seq"
-    seq.mkdir(exist_ok=True)
+    # Every real frame as an image, each output frame showing the one at or
+    # before its time. Through each slow-down, tools/smooth.py's frames are
+    # used instead.
+    tmp = OUT / f"{name}-frames"
     (tmp / "base").mkdir(parents=True, exist_ok=True)
-    run(["-ss", f"{a:.3f}", "-to", f"{b:.3f}", "-i", str(VID / tr["file"]), "-vf", "fps=30", "-q:v", "2", str(tmp / "base/%05d.jpg")])
+    run(["-ss", f"{a:.3f}", "-to", f"{b:.3f}", "-i", str(VID / tr["file"]), "-q:v", "2", str(tmp / "base/%05d.jpg")])
     base = sorted((tmp / "base").glob("*.jpg"))
-    wins = []
+    imgs = [base[min(len(base) - 1, int((s - a) * 30 + 1e-6))] for s in src]
     for j, c in enumerate(near):
-        w0, w1 = c - half - ease, c + half + ease
-        subprocess.run([str(VID / ".venv-kokoro/bin/python"), str(ROOT / "tools/smooth.py"), str(VID / tr["file"]),
-                        f"{w0 - 0.2:.3f}", f"{w1 + 0.2:.3f}", str(hi), str(ROOT / "work/track-p3.json"), level,
-                        str(seed[0]), str(seed[1]), str(tmp / f"hi{j}")], check=True, capture_output=True)
-        wins.append((w0, w1, w0 - 0.2, sorted((tmp / f"hi{j}").glob("*.jpg"))))
-    for i, s in enumerate(src):
-        pick = base[min(len(base) - 1, round((s - a) * 30))]
-        for w0, w1, origin, imgs in wins:
-            if w0 <= s <= w1:
-                pick = imgs[min(len(imgs) - 1, round((s - origin) * hi))]
-        (seq / f"{i:05d}.jpg").symlink_to(pick)
-    script = OUT / f"{name}.cmd"
-    run(["-framerate", "30", "-i", str(seq / "%05d.jpg"), "-vf", crops(script, frames),
-         "-an", *ENC, str(OUT / f"{name}.mp4")])
-    script.unlink()
-    subprocess.run(["trash", str(tmp), str(seq)], check=True)
+        # Through the zoom-out too, which outlasts the slow motion, so the
+        # camera never jumps between two ways of following the ball.
+        w0, w1 = c - half - ease, c + after + ease_out + 0.7
+        idx = [i for i, s in enumerate(src) if w0 <= s <= w1]
+        times = tmp / f"times{j}.json"
+        times.write_text(json.dumps([src[i] for i in idx]))
+        subprocess.run([str(VID / ".venv-kokoro/bin/python"), str(ROOT / "tools/smooth.py"), str(VID / tr["file"]), str(times),
+                        str(ROOT / "work/track-p3.json"), level, str(seed[0]), str(seed[1]), str(tmp / f"hi{j}")],
+                       check=True, capture_output=True)
+        pos = json.loads((tmp / f"hi{j}/pos.json").read_text())
+        for n, i in enumerate(idx):
+            imgs[i] = tmp / f"hi{j}/{n:05d}.jpg"
+            # The camera stays on the ball shown, which moves at a steady pace.
+            frames[i] = (frames[i][0], *pos[n])
+    camera(imgs, frames, OUT / f"{name}.mp4")
+    subprocess.run(["trash", str(tmp)], check=True)
 
 
 def pov(name, src, start, end, png):
@@ -163,7 +206,7 @@ for style in ("caption", "amber", "brand"):
     counter(f"counter-{style}", LV / "the-vault-ii/attempts/78-win.mp4", 4.0, 10.0, OV / f"attempt-78-{style}.png")
     pov(f"pov-{style}", LV / "channel-hop/attempts/58-win.mp4", 6.0, 13.0, OV / f"pov-hour-{style}.png")
 
-nearmiss_zoom("nearmiss-zoom-precision-iii", "Precision III", (384, 820), (3.93,))
+nearmiss_zoom("nearmiss-zoom-precision-iii", "Precision III", (384, 820), (3.90,))   # the ball clears the gap at 3.90 s
 nearmiss("nearmiss-stepping-down", "Stepping Down", take=3)
 nearmiss("nearmiss-back-and-forth", "Back and Forth")
 nearmiss("nearmiss-over-or-under", "Over or Under")

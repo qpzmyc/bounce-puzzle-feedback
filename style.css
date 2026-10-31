@@ -80,7 +80,7 @@ button { font: inherit; color: inherit; }
   box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.24);
   transition: transform 150ms var(--ease), background-color 150ms;
 }
-.back { order: -1; }
+.dock .back { width: 54px; height: 54px; }
 .back:active { transform: scale(0.94); }
 @media (hover: hover) { .back:hover { background: rgba(255, 255, 255, 0.24); } }
 
@@ -91,8 +91,9 @@ main { position: relative; z-index: 1; }
   display: flex; flex-direction: column; justify-content: center; align-items: center;
   padding: 76px 20px 40px;
 }
-.screen.enter-fwd { animation: in-fwd 360ms var(--ease) both; }
-.screen.enter-back { animation: in-back 360ms var(--ease) both; }
+/* backwards, not both: a held end transform would pin the fixed dock to a tall screen's bottom */
+.screen.enter-fwd { animation: in-fwd 360ms var(--ease) backwards; }
+.screen.enter-back { animation: in-back 360ms var(--ease) backwards; }
 @keyframes in-fwd { from { opacity: 0; transform: translateX(36px); } to { opacity: 1; transform: none; } }
 @keyframes in-back { from { opacity: 0; transform: translateX(-36px); } to { opacity: 1; transform: none; } }
 .col { width: 100%; max-width: 560px; display: flex; flex-direction: column; }
@@ -152,7 +153,9 @@ h1, h2, p { margin: 0; }
 
 /* welcome */
 .welcome { text-align: center; padding-top: 48px; padding-bottom: 48px; }
-.scene { width: min(300px, 78vw); height: auto; overflow: visible; margin-bottom: 8px; }
+.welcome .icon { width: 96px; height: 96px; border-radius: 22px; box-shadow: 0 14px 40px rgba(0, 0, 0, 0.5); animation: bob 2.6s ease-in-out infinite; }
+@keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+@media (prefers-reduced-motion: reduce) { .welcome .icon { animation: none; } }
 .wordmark { margin: 12px 0 22px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .wordmark img:first-child { width: 132px; height: auto; }
 .wordmark img:last-child { width: 118px; height: auto; }
@@ -170,21 +173,18 @@ h1, h2, p { margin: 0; }
 .vbody .card { font-size: 1.35rem; }
 .vbody .desc { font-size: 1rem; line-height: 1.4; margin-bottom: 6px; }
 
-/* the player: tap to pause, scrub, replay, sound */
-.player {
-  position: relative; flex: none; height: clamp(220px, 40dvh, 420px); aspect-ratio: 9 / 16;
+/* the player: the clip, with play and pause, replay, scrub and sound under it */
+.player { flex: none; display: flex; flex-direction: column; gap: 4px; }
+.p-frame {
+  position: relative; height: clamp(220px, 40dvh, 420px); aspect-ratio: 9 / 16;
   border-radius: 22px; overflow: hidden; background: #000;
   border: 3px solid rgba(255, 255, 255, 0.28); box-shadow: 0 12px 34px rgba(0, 0, 0, 0.5);
 }
 .player video { width: 100%; height: 100%; object-fit: cover; }
-.p-tap { position: absolute; inset: 0 0 46px; border: 0; background: transparent; cursor: pointer; display: grid; place-items: center; }
+.p-tap { position: absolute; inset: 0; border: 0; background: transparent; cursor: pointer; display: grid; place-items: center; }
 .p-tap svg { width: 56px; height: 56px; color: #fff; opacity: 0; transform: scale(0.8); transition: opacity 180ms, transform 180ms var(--ease); filter: drop-shadow(0 2px 10px rgba(0, 0, 0, 0.6)); }
 .player.paused .p-tap svg { opacity: 0.95; transform: none; }
-.p-bar {
-  position: absolute; left: 0; right: 0; bottom: 0; height: 46px; padding: 0 8px;
-  display: flex; align-items: center; gap: 6px;
-  background: linear-gradient(to top, rgba(10, 10, 20, 0.85), rgba(10, 10, 20, 0));
-}
+.p-bar { height: 40px; display: flex; align-items: center; gap: 6px; }
 .p-btn {
   flex: none; height: 34px; min-width: 34px; padding: 0 6px; border: 0; border-radius: 999px;
   display: inline-flex; align-items: center; justify-content: center; gap: 4px;
@@ -225,14 +225,34 @@ h1, h2, p { margin: 0; }
 .ends { display: flex; justify-content: space-between; margin-top: 4px; font: 600 1rem/1.3 var(--text); color: var(--ink); }
 /* The progress bar already shows where they are on the video screens */
 [data-screen="hook"] .kicker, [data-screen="compare"] .kicker, [data-screen="pick"] .kicker { display: none; }
-[data-screen="review"] .player { height: clamp(200px, 32dvh, 340px); }
 @media (max-width: 899px) {
   /* Smaller clip on the compare and pick screens, so every answer fits above the button */
-  [data-screen="compare"] .player, [data-screen="pick"] .player { height: clamp(190px, 32dvh, 330px); }
+  [data-screen="compare"] .p-frame, [data-screen="pick"] .p-frame { height: clamp(180px, 29dvh, 300px); }
+  /* The openings carry a slider and the AI-made row */
+  [data-screen="hook"] .p-frame { height: clamp(180px, 34dvh, 340px); }
 }
 
 /* choices: one answer from a row, with the ball's squash and pop */
 .choice { border: 0; padding: 0; margin: 18px 0 0; min-width: 0; }
+/* placer: a ball per option, dropped on one line */
+.pl-line { position: relative; height: 120px; }
+.pl-end { position: absolute; top: 72px; left: 0; font: 600 0.875rem/1.3 var(--text); color: var(--soft); }
+.pl-end.r { left: auto; right: 0; }
+.pl-track { position: absolute; left: 22px; right: 22px; top: 40px; height: 10px; border-radius: 10px; background: #2a2a52; box-shadow: inset 0 0 0 1.5px var(--edge); }
+.pl-tip { position: absolute; top: 0; left: 0; right: 0; text-align: center; color: var(--soft); font-size: 0.95rem; }
+.pl-ball {
+  position: absolute; width: 44px; height: 44px; margin-left: -22px; padding: 0; border: 0; border-radius: 50%;
+  font: 800 1rem/1 var(--display); color: #1b0a14; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none;
+  box-shadow: 0 0 0 3px var(--canvas), 0 4px 14px rgba(0, 0, 0, 0.5);
+  transition: left 180ms var(--ease), top 180ms var(--ease), transform 150ms var(--ease);
+}
+.pl-ball[data-i="0"] { background: var(--ball); }
+.pl-ball[data-i="1"] { background: var(--teal); }
+.pl-ball[data-i="2"] { background: var(--indigo-light); }
+.pl-ball.drag { transition: none; transform: scale(1.15); cursor: grabbing; z-index: 2; }
+.pl-ball.sel { box-shadow: 0 0 0 3px var(--canvas), 0 0 0 6px #fff; }
+.pl-clear { display: block; margin: 4px 0 0 auto; }
+.pl-clear[hidden] { display: none; }
 .choice legend { padding: 0; font: 600 1.0625rem/1.3 var(--text); margin-bottom: 10px; }
 .c-row { display: grid; gap: 8px; }
 .c-row.c2, .c-row.c4 { grid-template-columns: repeat(2, 1fr); }
@@ -317,7 +337,7 @@ h1, h2, p { margin: 0; }
 /* replay sheet */
 .sheet { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; padding: 20px; background: rgba(5, 5, 12, 0.82); }
 .sheet-card { position: relative; }
-.sheet .player { height: min(78dvh, 640px); }
+.sheet .p-frame { height: min(72dvh, 600px); }
 .sheet-close {
   position: absolute; z-index: 2; top: 10px; right: 10px; width: 44px; height: 44px; border: 0; border-radius: 50%;
   display: grid; place-items: center; background: #fff; color: #1b0a14; cursor: pointer; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
@@ -385,13 +405,13 @@ h1, h2, p { margin: 0; }
   .col.wide { max-width: 760px; }
   .vscreen { justify-content: center; padding: 80px 20px 60px; }
   .vlayout { max-width: 1000px; flex-direction: row; justify-content: center; align-items: center; gap: 56px; }
-  .player { height: min(70dvh, 640px); border-radius: 30px; }
+  .p-frame { height: min(66dvh, 600px); border-radius: 30px; }
   .vbody { width: 440px; flex: none; margin-top: 0; }
   .vbody .card { font-size: 1.75rem; }
   .vbody .desc { font-size: 1.125rem; }
   .rank.thumbs { grid-template-columns: repeat(6, 1fr); }
   .top { padding-left: 24px; padding-right: 24px; max-width: 1000px; margin: 0 auto; }
-  .scene { width: 380px; }
+  .welcome .icon { width: 128px; height: 128px; border-radius: 29px; }
   .wordmark img:first-child { width: 210px; }
   .wordmark img:last-child { width: 188px; }
   .note p:first-child { font-size: 1.5rem; }
@@ -403,15 +423,15 @@ h1, h2, p { margin: 0; }
   .actions.dock {
     position: fixed; z-index: 5; left: 0; right: 0; bottom: 0; margin: 0;
     padding: 18px 20px calc(14px + env(safe-area-inset-bottom));
-    flex-direction: column; align-items: stretch; gap: 2px;
+    flex-wrap: nowrap; gap: 12px;
     background: linear-gradient(to top, var(--canvas) 72%, rgba(15, 15, 26, 0));
   }
-  .actions.dock .btn.primary { width: 100%; min-height: 54px; padding: 0 24px; font-size: 1.05rem; }
+  .actions.dock .btn.primary { flex: 1; min-height: 54px; padding: 0 24px; font-size: 1.05rem; }
   .screen:has(.dock) { padding-bottom: 110px; }
 }
 /* short phones: a smaller clip so the questions start higher */
 @media (max-width: 899px) and (max-height: 740px) {
-  .player { height: clamp(200px, 36dvh, 300px); }
+  .p-frame { height: clamp(200px, 36dvh, 300px); }
   .vbody .desc { display: none; }
 }
 @media (max-width: 359px) { .c-row { gap: 6px; } .c-opt span { font-size: 0.8rem; } }
