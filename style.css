@@ -154,6 +154,16 @@ h1, h2, p { margin: 0; }
 /* Skip: nothing answered on this screen yet */
 .btn.primary.quiet { background: rgba(255, 255, 255, 0.12); color: var(--soft); box-shadow: none; }
 @media (hover: hover) { .btn.primary.quiet:hover { background: rgba(255, 255, 255, 0.2); } }
+/* Next, part answered: fills with coral by the share of the screen answered (--done) */
+.dock [data-next].part {
+  position: relative; isolation: isolate; overflow: hidden;
+  background: rgba(255, 107, 107, 0.16); color: var(--ink); text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  box-shadow: inset 0 0 0 2px rgba(255, 107, 107, 0.55);
+}
+.dock [data-next].part::before {
+  content: ""; position: absolute; inset: 0 auto 0 0; z-index: -1; width: var(--done, 0%);
+  background: var(--ball); transition: width 250ms var(--ease);
+}
 :focus-visible { outline: 3px solid var(--teal); outline-offset: 3px; }
 
 /* welcome */

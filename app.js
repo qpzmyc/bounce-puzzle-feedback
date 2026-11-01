@@ -351,14 +351,35 @@
   // hidden. Answer (the dock's Next) shrinks the clip and shows them.
   var phone = window.matchMedia('(max-width: 899px)');
   function watching(sec) { return phone.matches && sec.classList.contains('watching'); }
+  // How much of a screen is answered, from 0 to 1. Each slider, 1-to-5 row
+  // and choice counts as one part, and a ranking counts its ranked share of
+  // one part. A hidden choice counts only when marked data-later (it opens
+  // once the rest is done), so a follow-up that does not apply is left out.
+  function filled(sec) {
+    var done = 0, total = 0;
+    sec.querySelectorAll('.slider').forEach(function (s) { total++; if (s.classList.contains('set')) done++; });
+    sec.querySelectorAll('.rate5').forEach(function (f) { total++; if (f.querySelector('.r5.on')) done++; });
+    sec.querySelectorAll('.c-row').forEach(function (r) {
+      var f = r.parentNode;
+      if (f.hidden && !f.hasAttribute('data-later')) return;
+      total++; if (r.querySelector('.c-opt.on')) done++;
+    });
+    sec.querySelectorAll('.rank').forEach(function (r) {
+      total++; done += r.querySelectorAll('.r-item.ranked').length / r.querySelectorAll('.r-item').length;
+    });
+    return total ? done / total : 0;
+  }
   // The screen's Next reads "Skip" and sits quiet until something on it is
-  // answered, then lights up as "Next".
+  // answered, then reads "Next" and fills with coral by the share answered.
   function refreshDock(sec) {
     var b = sec && sec.querySelector('.dock [data-next]');
     if (!b) return;
     var has = answered(sec);
+    var part = watching(sec) ? 1 : filled(sec);
     b.textContent = watching(sec) ? 'Answer' : has ? 'Next' : 'Skip';
     b.classList.toggle('quiet', !has && !watching(sec));
+    b.classList.toggle('part', has && part < 1);
+    b.style.setProperty('--done', Math.round(part * 100) + '%');
   }
   // Screen header: the part name, then the question in a speech bubble from the game icon.
   function head(s, title, desc) {
@@ -459,6 +480,7 @@
       // One question at a time: the second appears once all three are rated.
       var second = choice('p2_' + t.id + '_download', 'Which makes you most likely to download the game?', t.edits);
       second.hidden = !/(\|.*){2}/.test(answers[key] || '');
+      second.setAttribute('data-later', '');
       // Saved together as "A: name 80 | C: name 55 | B: name 20", highest first.
       function combine() {
         var r = t.edits.map(function (n, i) { return i; }).filter(function (i) { return answers[key + i] != null; })
