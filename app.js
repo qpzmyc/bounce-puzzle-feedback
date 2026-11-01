@@ -390,13 +390,10 @@
       (desc ? '<p class="desc">' + desc + '</p>' : '') + '</div></div>';
   }
   // Tabs over one player, for screens that compare versions of a clip. Each
-  // tab shows a coral dot until it is done, then a tick. mark says what done
-  // means: 'seen' (its clip played through, ticked here) or 'done' (rated,
-  // ticked by the screen).
-  function tabbed(options, sound, onSelect, mark) {
+  // tab shows a coral dot until its clip has played through, then a tick.
+  function tabbed(options, sound, onSelect) {
     var box = el('div', 'vside');
     var tabs = el('div', 'tabs');
-    tabs.setAttribute('data-mark', mark || 'seen');
     var p = player(options[0][0], { sound: sound });
     var cur = 0;
     options.forEach(function (o, i) {
@@ -472,7 +469,7 @@
       legend.textContent = 'How long would you watch each one?';
       var tb = tabbed(t.edits.map(function (n, i) { return ['edit-' + t.dir + '-' + 'abc'[i], n]; }), true, function (i) {
         rows.forEach(function (r, n) { r.classList.toggle('on', n === i); });
-      }, 'done');
+      });
       lay.appendChild(tb.box);
       var body = el('div', 'vbody');
       body.innerHTML = head(s, t.title, t.edits.length + ' ways to edit the same video. Watch each, then pick.');
@@ -486,15 +483,10 @@
         var r = t.edits.map(function (n, i) { return i; }).filter(function (i) { return answers[key + i] != null; })
           .sort(function (a, b) { return answers[key + b] - answers[key + a]; });
         answers[key] = r.length ? r.map(function (i) { return LETTERS[i] + ': ' + t.edits[i] + ' ' + answers[key + i]; }).join(' | ') : null;
-        ticks();
         if (r.length < t.edits.length || !second.hidden) return;
         second.hidden = false;
         setTimeout(function () { second.scrollIntoView({ behavior: reduce.matches ? 'auto' : 'smooth', block: 'center' }); }, 120);
       }
-      function ticks() {
-        Array.prototype.forEach.call(tb.tabs.children, function (b, i) { b.classList.toggle('done', answers[key + i] != null); });
-      }
-      ticks();
       body.appendChild(second);
       body.appendChild(dock());
       lay.appendChild(body);
@@ -671,6 +663,12 @@
         sec.querySelector('[tabindex="-1"]').focus({ preventScroll: true });
         return true;
       };
+      // Expand, in the clip's controls: back to the large clip, answers kept.
+      var big = el('button', 'p-btn p-big', '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M10 20H4v-6M20 4l-6 6M4 20l6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>');
+      big.type = 'button';
+      big.setAttribute('aria-label', 'Watch bigger');
+      big.addEventListener('click', function () { sec.back(); });
+      sec.querySelector('.p-bar').appendChild(big);
       sec.back = function () {
         if (!phone.matches || sec.classList.contains('watching')) return false;
         sec.classList.add('watching');

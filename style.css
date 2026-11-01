@@ -279,7 +279,10 @@ h1, h2, p { margin: 0; }
     box-shadow: 0 6px 20px rgba(255, 107, 107, 0.3); animation: nudge 1.8s ease-in-out 2;
   }
   .p-frame { transition: height 320ms var(--ease); }
+  .vscreen:not(.watching) .p-big { display: inline-flex; }
 }
+/* Expand: back to the large clip, only once the answers are open on a phone */
+.p-big { display: none; }
 
 /* the question card shows only while watching, on a phone */
 .peek { display: none; }
@@ -322,14 +325,14 @@ h1, h2, p { margin: 0; }
 .tab span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .tab.on { background: var(--indigo); border-color: var(--indigo); color: #fff; }
 .tab.on b { color: #fff; }
-/* A coral dot badge on the tab's corner until it is done (watched or rated, per data-mark), then a green tick badge */
+/* A coral dot badge on the tab's corner until its clip has played through, then a green tick badge */
 .tabs { padding-top: 5px; }
 .tab { position: relative; overflow: visible; }
 .tab::after {
   content: ""; position: absolute; top: -4px; right: -2px; width: 10px; height: 10px;
   border-radius: 50%; background: var(--ball); box-shadow: 0 0 0 2px var(--canvas);
 }
-.tabs[data-mark="seen"] .tab.seen::after, .tabs[data-mark="done"] .tab.done::after {
+.tab.seen::after {
   content: "✓"; width: 15px; height: 15px; top: -6px; right: -4px; display: grid; place-items: center;
   background: var(--goal); color: #10240b; font: 800 0.625rem/1 var(--text);
 }
