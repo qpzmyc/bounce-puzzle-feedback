@@ -344,12 +344,12 @@ h1, h2, p { margin: 0; }
   background: rgba(255, 255, 255, 0.12); color: var(--indigo-light); font: 800 0.85rem/1 var(--display);
 }
 .rate-row.on .rate-let { background: var(--indigo); color: #fff; }
-.rate-row .slider { flex: 1; min-width: 0; margin: 0; display: flex; align-items: center; gap: 8px; }
-.rate-row .s-top { order: 2; flex: none; width: 46px; min-height: 0; margin: 0; justify-content: flex-end; }
-.rate-row .slider.set .s-val { font-size: 1.15rem; }
+.rate-row .slider { flex: 1; min-width: 0; margin: 0; display: flex; align-items: center; gap: 12px; }
+.rate-row .s-top { order: 2; flex: none; width: 62px; min-height: 0; margin: 0; justify-content: flex-end; }
+.rate-row .slider.set .s-val { font-size: 1rem; }
 .rate-row .slider input { flex: 1; min-width: 0; }
 .rate-row .ends { display: none; }
-.ends.rate-ends { margin: 2px 54px 0 42px; font-size: 0.875rem; color: var(--soft); }
+.ends.rate-ends { margin: 2px 74px 0 42px; font-size: 0.875rem; color: var(--soft); }
 
 /* tap to rank */
 .rank { display: grid; gap: 10px; }
