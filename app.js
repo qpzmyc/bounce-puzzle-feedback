@@ -109,6 +109,7 @@
   if (saved && saved.answers) answers = saved.answers;
   var sid = (saved && saved.sid) || Math.random().toString(36).slice(2, 10);
   var sent = false;
+  var sending = false;
   function persist() {
     try { localStorage.setItem(STORE, JSON.stringify({ sid: sid, answers: answers, at: current, done: sent })); } catch (e) {}
   }
@@ -179,7 +180,17 @@
     pp.addEventListener('click', toggle);
     replay.addEventListener('click', function () { v.currentTime = 0; play(); });
     scrub.addEventListener('input', function () { dragging = true; if (v.duration) v.currentTime = scrub.value / 1000 * v.duration; });
-    scrub.addEventListener('change', function () { dragging = false; });
+    // A drag a scroll takes over may never fire change, so these end it too.
+    ['change', 'pointerup', 'pointercancel', 'blur'].forEach(function (t) { scrub.addEventListener(t, function () { dragging = false; }); });
+    // Seconds the clip has played on its own, added up between timeupdates.
+    // Scrubbing, seeking and jumps do not add, so dragging to the end is not watching.
+    var lastT = 0, reach = 0;
+    v.addEventListener('timeupdate', function () {
+      var t = v.currentTime;
+      if (!dragging && !v.paused && !v.seeking && t > lastT && t - lastT < 1.5) reach += t - lastT;
+      lastT = t;
+    });
+    w.watched = function () { return v.duration ? reach / v.duration : 0; };
     v.addEventListener('timeupdate', function () { if (!dragging && v.duration) scrub.value = Math.round(v.currentTime / v.duration * 1000); });
     v.addEventListener('play', function () { w.classList.remove('paused'); tap.setAttribute('aria-label', 'Pause'); pp.setAttribute('aria-label', 'Pause'); pp.innerHTML = PAUSE_SVG; });
     v.addEventListener('pause', function () { w.classList.add('paused'); tap.setAttribute('aria-label', 'Play'); pp.setAttribute('aria-label', 'Play'); pp.innerHTML = PLAY_SVG; });
@@ -188,12 +199,14 @@
       v.preload = 'auto';
       var p = v.play();
       // A browser that blocks sound before a tap still plays the clip, muted.
-      if (p && p.catch) p.catch(function () { if (!v.muted) { v.muted = true; v.play().catch(function () {}); } });
+      // Any other failure, such as a pause from leaving the screen, is left alone.
+      if (p && p.catch) p.catch(function (e) { if (e && e.name === 'NotAllowedError' && !v.muted) { v.muted = true; v.play().catch(function () {}); } });
     }
     w.play = play;
     w.stop = function () { v.pause(); };
     w.load = function (clip2) {
       v.src = 'clips/' + clip2 + '.mp4';
+      lastT = 0; reach = 0;
       poster = 'clips/' + clip2 + '.jpg';
       if (v.hasAttribute('poster')) v.poster = poster;
       scrub.value = 0;
@@ -202,7 +215,8 @@
   }
 
   // A 0 to 100% slider in steps of 5. It starts unanswered, showing a dash,
-  // and only counts once it has been moved or tapped.
+  // and only counts once it has been moved or tapped. A tap counts on lift,
+  // so a finger that lands on it to scroll the page (pointercancel) records nothing.
   function slider(key, question, left, right, onTake, blank) {
     var w = el('div', 'slider');
     var id = 's-' + key;
@@ -220,8 +234,7 @@
     }
     function take() { answers[key] = Number(input.value); show(); if (onTake) onTake(); }
     input.addEventListener('input', take);
-    input.addEventListener('pointerdown', function () { setTimeout(take, 0); });
-    input.addEventListener('keydown', function () { setTimeout(take, 0); });
+    input.addEventListener('pointerup', take);
     show();
     w.refresh = show;
     return w;
@@ -286,6 +299,7 @@
       });
     }
     show();
+    w.refresh = show;
     return w;
   }
 
@@ -403,7 +417,7 @@
     });
     var v = p.querySelector('video');
     v.addEventListener('timeupdate', function () {
-      if (v.duration && v.currentTime / v.duration > 0.9) tabs.children[cur].classList.add('seen');
+      if (p.watched() > 0.9) tabs.children[cur].classList.add('seen');
     });
     function select(i, go) {
       cur = i;
@@ -485,8 +499,21 @@
         answers[key] = r.length ? r.map(function (i) { return LETTERS[i] + ': ' + t.edits[i] + ' ' + answers[key + i]; }).join(' | ') : null;
         if (r.length < t.edits.length || !second.hidden) return;
         second.hidden = false;
-        setTimeout(function () { second.scrollIntoView({ behavior: reduce.matches ? 'auto' : 'smooth', block: 'center' }); }, 120);
+        if (held) pending = true; else setTimeout(reveal, 120);
       }
+      // The scroll to the second question waits until the finger leaves the
+      // slider, so it never moves the page under a drag.
+      var held = false, pending = false;
+      function reveal() {
+        if (screens[current] === sec) second.scrollIntoView({ behavior: reduce.matches ? 'auto' : 'smooth', block: 'center' });
+      }
+      rate.addEventListener('pointerdown', function () { held = true; });
+      ['pointerup', 'pointercancel'].forEach(function (ev) {
+        window.addEventListener(ev, function () {
+          held = false;
+          if (pending) { pending = false; setTimeout(reveal, 120); }
+        });
+      });
       body.appendChild(second);
       body.appendChild(dock());
       lay.appendChild(body);
@@ -524,7 +551,7 @@
         if (!s.follow) return go();
         var open = i !== s.follow.unless;
         follow.hidden = !open;
-        if (!open) { delete answers[s.follow.key]; go(); }
+        if (!open) { delete answers[s.follow.key]; follow.refresh(); go(); }
         else clearTimeout(timer);
       }, true));
       if (s.follow) {
@@ -565,7 +592,8 @@
         var facts = [];
         if (t.hook) facts.push(['Kept watching', answers['p1_' + t.hook.id] + '%', esc(t.hook.name)]);
         var agree = agreement();
-        var firstPick = TYPES.map(function (ty) { var a = answers['p2_' + ty.id + '_watch']; return a ? a.slice(3) : null; }).filter(Boolean)[0];
+        // "A: Countdown ring 80 | C: …" is highest first, so the first part's name is their top edit.
+        var firstPick = TYPES.map(function (ty) { var a = answers['p2_' + ty.id + '_watch']; return a ? a.split(' | ')[0].slice(3).replace(/ \d+$/, '') : null; }).filter(Boolean)[0];
         if (agree) facts.push(['Agreed with Cheng', agree[0] + '/' + agree[1], 'picks']);
         else if (firstPick) facts.push(['Favourite edit', esc(firstPick), '']);
         // The frame shows a still of their top opening, or the game scene when they rated none.
@@ -608,6 +636,8 @@
     var best = null;
     HOOKS.forEach(function (h) { var v = answers['p1_' + h.id]; if (v != null && (!best || v > answers['p1_' + best.id])) best = h; });
     if (!best) return { name: 'The Mystery Viewer', color: '#8c8cc4', line: 'You skipped the ratings, so your taste stays a secret.', hook: null };
+    // A best rating of 5% or less means no opening kept them watching.
+    if (answers['p1_' + best.id] <= 5) return { name: 'The Mystery Viewer', color: '#8c8cc4', line: 'Nothing kept you watching, so your taste stays a secret.', hook: null };
     var t = TASTES[best.id];
     return { name: t.name, color: t.color, line: t.line, hook: best };
   }
@@ -646,17 +676,18 @@
       peek.setAttribute('data-next', '');
       dk.parentNode.insertBefore(peek, dk);
       // Answer fills with the clip's furthest point played, and lights up once one play is nearly done.
-      (function (sec, v, go) {
+      (function (sec, p, go) {
         var seen = 0;
-        v.addEventListener('timeupdate', function () {
-          if (!v.duration || sec.classList.contains('seen')) return;
-          seen = Math.max(seen, v.currentTime / v.duration);
+        p.querySelector('video').addEventListener('timeupdate', function () {
+          if (sec.classList.contains('seen')) return;
+          seen = Math.max(seen, p.watched());
           go.style.setProperty('--seen', Math.round(seen * 100) + '%');
           if (seen > 0.9) sec.classList.add('seen');
         });
-      })(sec, sec.querySelector('video'), dk.querySelector('[data-next]'));
+      })(sec, sec.players[0], dk.querySelector('[data-next]'));
       sec.next = function () {
         if (!watching(sec)) return false;
+        settle();
         sec.classList.remove('watching');
         sec.classList.add('opened');
         refreshDock(sec);
@@ -671,6 +702,7 @@
       sec.querySelector('.p-bar').appendChild(big);
       sec.back = function () {
         if (!phone.matches || sec.classList.contains('watching')) return false;
+        settle();
         sec.classList.add('watching');
         sec.classList.remove('opened');
         refreshDock(sec);
@@ -685,8 +717,17 @@
   // ---- Moving between screens --------------------------------------------------
 
   var current = 0;
+  // Taps are ignored for a moment after the screen or its view changes, so a
+  // double tap on Next, or a second tap on a quick question, cannot land on
+  // what replaced it.
+  var settledAt = 0;
+  function settle() { settledAt = Date.now() + 400; }
+  document.addEventListener('click', function (e) {
+    if (Date.now() < settledAt && e.target.closest('button')) { e.preventDefault(); e.stopPropagation(); }
+  }, true);
   function show(i, dir) {
     var last = screens.length - 1;
+    if (dir) settle();
     screens.forEach(function (s, n) { s.hidden = n !== i; s.classList.remove('enter-fwd', 'enter-back'); });
     var s = screens[i];
     current = i;
@@ -726,6 +767,8 @@
     if (current < screens.length - 2) show(current + 1, 1);
   }
   function back() {
+    // Leaving the Send screen mid-send would have the send pull them to the card later.
+    if (sending) return;
     var s = screens[current];
     if (s.back && s.back()) return;
     if (current > 0 && current < screens.length - 1) show(current - 1, -1);
@@ -798,7 +841,16 @@
     if (DRY) { finish(); return; }
     sendBtn.disabled = true;
     sendBtn.textContent = 'Sending';
-    fetch(FORM_URL, { method: 'POST', mode: 'no-cors', body: c.fd }).then(finish, function () {
+    sending = true;
+    // Gives up after 15 seconds on a stalled connection, so Try again appears.
+    var ctl = window.AbortController ? new AbortController() : null;
+    var timer = ctl && setTimeout(function () { ctl.abort(); }, 15000);
+    fetch(FORM_URL, { method: 'POST', mode: 'no-cors', body: c.fd, signal: ctl ? ctl.signal : undefined }).then(function () {
+      clearTimeout(timer);
+      finish();
+    }, function () {
+      clearTimeout(timer);
+      sending = false;
       sendBtn.disabled = false;
       sendBtn.textContent = 'Try again';
       msg.textContent = 'That did not go through. Check your connection and tap Try again.';
@@ -810,14 +862,16 @@
     sendBtn.disabled = false;
     sendBtn.textContent = 'Send my answers';
     sent = true;
+    sending = false;
     show(screens.length - 1, 1);
   }
 
   // Leaving before Send: send what they have, once per change, without waiting
-  // for an answer. visibilitychange also covers a phone switching apps.
+  // for an answer. visibilitychange also covers a phone switching apps. Skipped
+  // while the final send is in flight, so no "not finished" row trails it.
   var lastEarly = '';
   function sendEarly() {
-    if (sent) return;
+    if (sent || sending) return;
     var snap = JSON.stringify(answers);
     if (snap === lastEarly) return;
     var c = collect(false);
